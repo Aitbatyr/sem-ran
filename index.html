@@ -1,0 +1,1098 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Seminar Randomizer</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --ring: #38bdf8;
+      --ok: #dcfce7;
+      --over: #f1f5f9;
+      --prio: #fef3c7;
+      --good: #16a34a;
+      --bad: #dc2626;
+      --abs: #475569;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif; color: var(--text); }
+    body { background: var(--bg); display: grid; place-items: start center; padding: 16px; }
+    .wrap { width: min(1160px, 100%); display: grid; gap: 16px; }
+    h1 { text-align: center; font-size: 22px; margin: 6px 0 0; }
+    .row { display: flex; gap: 10px; justify-content: center; align-items: center; }
+    .toolbar { justify-content: space-between; flex-wrap: wrap; }
+    .input, .num, .sel {
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      outline: none;
+      font-size: 15px;
+      box-shadow: 0 1px 2px rgb(0 0 0 / 4%);
+    }
+    .sel { padding-right: 30px; }
+    .num { width: 90px; text-align: right; }
+    .input:focus, .num:focus, .sel:focus { border-color: var(--ring); box-shadow: 0 0 0 3px rgb(56 189 248 / 25%); }
+    .btn {
+      border: 1px solid var(--border);
+      background: var(--card);
+      padding: 10px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+      box-shadow: 0 1px 2px rgb(0 0 0 / 4%);
+      font-size: 15px;
+      line-height: 1;
+    }
+    .btn:active { transform: translateY(1px); }
+    .btn.small{ padding: 8px 10px; font-size: 13px; }
+    .btn.primary{ border-color: #0ea5e9; box-shadow: 0 0 0 2px rgb(14 165 233 / 15%); }
+    .btn.danger{ border-color: #ef4444; }
+    .card { border: 1px solid var(--border); background: var(--card); border-radius: 14px; box-shadow: 0 1px 2px rgb(0 0 0 / 4%); }
+    .card h2 { margin: 0; font-size: 16px; padding: 12px 14px; border-bottom: 1px solid var(--border); display:flex; justify-content: space-between; align-items: center; gap:8px;}
+    .section { display:grid; gap: 8px; padding: 12px; }
+    ul { list-style: none; margin: 0; padding: 0; }
+    li { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-top: 1px solid var(--border); }
+    li:first-child { border-top: 0; }
+    .empty { text-align: center; color: var(--muted); padding: 20px; }
+    .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display:flex; align-items:center; gap:8px; }
+    .del { width: 36px; height: 36px; border-radius: 999px; border: 1px solid var(--border); background: #fff; cursor: pointer; font-size: 18px; }
+    .del:hover { background: #f8fafc; }
+    .hint { text-align: center; color: var(--muted); font-size: 13px; }
+    .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .left { display:grid; gap: 12px; }
+    .queueControls { display:flex; gap:8px; align-items:center; flex-wrap: wrap; }
+    .cap { font-size: 12px; color: var(--muted); min-height: 1em; }
+    .ok { background: var(--ok); }
+    .over { background: var(--over); color: #334155; }
+    .chip { font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); color: #334155; background: #fff; }
+    .star { font-size: 12px; color: #b45309; background: var(--prio); border: 1px solid #f59e0b; padding: 2px 6px; border-radius: 999px; }
+    .stats { display:flex; gap:8px; align-items:center; margin-left: 4px; }
+    .good { color: var(--good); font-weight: 600; }
+    .bad { color: var(--bad); font-weight: 600; }
+    .absCnt { color: var(--abs); font-weight: 600; }
+    .abs { color: #94a3b8; text-decoration: line-through; }
+    .absToggle { display:flex; align-items:center; gap:6px; font-size: 12px; color:#334155; }
+    .edit{ padding:6px 8px; font-size:14px; border:1px solid var(--border); border-radius:8px; outline:none; }
+    .edit:focus{ border-color: var(--ring); box-shadow: 0 0 0 3px rgb(56 189 248 / 25%);}
+    @media (max-width: 940px){ .cols{ grid-template-columns: 1fr; } }
+    .settings { display:flex; gap:10px; align-items:center; flex-wrap: wrap; }
+    .settings label { display:flex; align-items:center; gap:6px; color:#334155; font-size:14px; }
+    /* Backups + Help */
+    #backupsCard { display:none; }
+    .backupMeta { font-size: 12px; color: var(--muted); }
+    .backupRow { display:flex; gap:10px; align-items:center; justify-content: space-between; padding: 10px 0; border-top: 1px solid var(--border); }
+    .backupRow:first-child { border-top: 0; }
+    .helpOverlay{position:fixed; inset:0; background:rgba(15,23,42,.55); display:none; align-items:center; justify-content:center; padding:16px; z-index:1000;}
+    .helpCard{width:min(900px,100%); max-height:80vh; overflow:auto;}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1 id="hdrTitle">Seminar Randomizer</h1>
+
+    <div class="row toolbar">
+      <div class="row">
+        <button id="importBtn" class="btn" title="">Импорт</button>
+        <input id="fileInput" type="file" accept=".json,application/json" hidden>
+        <button id="saveBackupBtn" class="btn" title="">Сохранить в сайт</button>
+        <button id="helpBtn" class="btn" title="">Помощь</button>
+      </div>
+      <div class="queueControls">
+        <button id="randomizeBtn" class="btn primary" title="">Randomize</button>
+        <button id="endBtn" class="btn danger" title="">Завершить пару</button>
+        <button id="clearQueueBtn" class="btn" title="">Сбросить очередь</button>
+        <button id="resetStatsBtn" class="btn danger" title="">Сбросить статистику</button>
+        <select id="langSel" class="sel" title="">
+          <option value="ru">Рус</option>
+          <option value="en">Eng</option>
+          <option value="kk">Қаз</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><span id="timeSettingsTitle">Настройки времени</span> <span class="cap" id="capInfo"></span></h2>
+      <div class="section settings">
+        <label id="lblPair"><span>Длительность пары (мин):</span> <input id="pairMin" class="num" type="number" min="10" step="5" value="100"></label>
+        <label id="lblPer"><span>Минут на одного:</span> <input id="perMin" class="num" type="number" min="1" step="1" value="3"></label>
+        <span class="chip" id="calcNote"></span>
+      </div>
+    </div>
+
+    <div class="cols">
+      <div class="left">
+        <div class="card">
+          <h2><span id="studentsTitle">Студенты</span>
+            <span id="countBadge" class="cap"></span> 
+            <span id="prioBadge" class="cap"></span>
+            <span id="absBadge" class="cap"></span>
+          </h2>
+          <div class="section row" style="justify-content: space-between; gap: 8px;">
+            <div class="row" style="flex:1;">
+              <input id="input" class="input" placeholder="добавить студента" autocomplete="off" />
+              <button id="addBtn" class="btn" title="Добавить" aria-label="Добавить">+</button>
+            </div>
+            <label class="absToggle"><input type="checkbox" id="toggleAbsMode"> <span id="absModeText">режим отметки отсутствия</span></label>
+          </div>
+          <div class="hint" id="hintStats">...</div>
+          <ul id="list">
+            <li class="empty" id="emptyList">Пока пусто</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2><span id="queueTitle">Очередь на сегодня</span> <span id="queueCap" class="cap"></span></h2>
+        <div class="section">
+          <ul id="queue">
+            <li class="empty" id="emptyQueue">Нажмите Randomize</li>
+          </ul>
+          <div class="hint" id="hintQueueAbs">Отсутствующие НЕ попадают в очередь и им не начисляется ✗.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row" style="justify-content:center; margin-top:-4px;">
+      <button id="toggleBackupsBtn" class="btn" title="">Бэкапы</button>
+    </div>
+    <div id="backupsCard" class="card">
+      <h2 id="backupsTitle">Бэкапы (внутри сайта)</h2>
+      <div class="section">
+        <div class="row" style="justify-content: space-between;">
+          <span class="backupMeta" id="binfo">Пока пусто</span>
+          <button id="saveBackupBtn2" class="btn" title="">Сохранить сейчас</button>
+        </div>
+        <div id="backupsList"></div>
+      </div>
+    </div>
+
+    <div id="helpOverlay" class="helpOverlay" style="display:none;">
+      <div class="card helpCard">
+        <h2 id="helpTitle">Справка по системе</h2>
+        <div class="section" style="gap:10px;">
+          <div id="helpIntro"></div>
+          <ul id="helpList" style="margin-left:16px;"></ul>
+          <div id="helpLegend" class="hint"></div>
+          <div id="helpStorage" class="hint"></div>
+          <div class="row" style="justify-content:flex-end; gap:8px;">
+            <button id="helpClose" class="btn">Понятно</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      // ===== i18n =====
+      const LANG_KEY = "sr_lang";
+      const i18n = {
+        ru: {
+          app_title: "Seminar Randomizer",
+          import: "Импорт",
+          save_site: "Сохранить в сайт",
+          help: "Помощь",
+          randomize: "Randomize",
+          end: "Завершить пару",
+          clear_queue: "Сбросить очередь",
+          reset_stats: "Сбросить статистику",
+          lang_title: "Язык",
+          time_settings: "Настройки времени",
+          limit: "Лимит: {n}",
+          pair_label: "Длительность пары (мин):",
+          per_label: "Минут на одного:",
+          calc_note: "Расчёт: floor(длительность / на одного)",
+          students: "Студенты",
+          add_placeholder: "добавить студента",
+          add: "Добавить",
+          abs_mode: "режим отметки отсутствия",
+          hint_stats: "В режиме отметки кликай по имени, чтобы пометить как отсутствующего (сегодня). Статистика: <span class=\"good\">✓ — выступил</span>, <span class=\"bad\">✗ — не успел</span>, <span class=\"absCnt\">Ø — отсутствовал</span>.",
+          empty_list: "Пока пусто",
+          queue_today: "Очередь на сегодня",
+          empty_queue: "Нажмите Randomize",
+          hint_queue_abs: "Отсутствующие НЕ попадают в очередь и им не начисляется ✗.",
+          backups_btn: "Бэкапы",
+          backups_hide: "Скрыть бэкапы",
+          backups_title: "Бэкапы (внутри сайта)",
+          backups_empty: "Пока пусто",
+          backups_count: "Сохранено бэкапов: {n}",
+          save_now: "Сохранить сейчас",
+          saved_backup: "Бэкап сохранён внутри сайта.",
+          restore: "Восстановить",
+          download: "Скачать",
+          delete: "Удалить",
+          delete_word: "Удалить",
+          restore_confirm: "Восстановить этот бэкап? Это перезапишет текущих студентов/очередь/настройки. Напишите: подтвердить",
+          restored: "Бэкап восстановлен.",
+          delete_confirm: "Удалить этот бэкап?",
+          not_found: "Бэкап не найден.",
+          priority_tag: "приоритет",
+          performed: "Выступил ✓",
+          skip: "Пропустить →",
+          end_done: "Пара завершена. Обновлена статистика. Отметки отсутствия сброшены.",
+          reset_confirm: "Полный сброс у ВСЕХ: статистика (✓/✗/Ø) → 0, приоритеты (carry) сняты, очередь очищена, отметки отсутствия сняты.\nСостав списка и настройки времени не меняются.\n\nДля подтверждения введите слово: подтвердить",
+          reset_done: "Сброс выполнен.",
+          cancelled: "Отменено.",
+          bad_json: "Неверный формат JSON. Нужен массив объектов {id?, name, carry?, spoke?, missed?, absences?} или {students:[...] }.",
+          read_fail: "Не удалось прочитать JSON.",
+          need_students: "Сначала добавьте студентов.",
+          no_present: "Никого из присутствующих нет.",
+          queue_will_fit: "Успеют ≈ {a} из {b}",
+          count_badge: "({n})",
+          prio_badge: "приоритет: {n}",
+          abs_badge: "отмечены отсутствующие: {n}",
+          meta_backup: "({n} студентов, лимит {pair}/{per})",
+          // Help
+          help_title: "Справка по системе",
+          help_intro: "Для порядка на семинаре: очередь, приоритеты, отсутствие, автоматический учёт.",
+          help_items: [
+            "<b>Добавить студента</b> — поле «добавить студента» + «+». Удаление — кнопка «–» напротив имени.",
+            "<b>Переименовать</b> — двойной клик по имени (Enter — сохранить, Esc — отменить)",
+            "<b>Режим отметки отсутствия</b> — включите чекбокс и кликните по имени. Отсутствующие не попадают в очередь и им не начисляется ✗. Счётчик Ø растёт при «Завершить пару».",
+            "<b>Randomize</b> — формирует очередь: сначала <i>приоритетные</i> (тем, кто не успел в прошлый раз), затем остальные случайно.",
+            "<b>Очередь</b>: «<i>Выступил ✓</i>» — снимает приоритет и +1 к ✓; «<i>Пропустить →</i>» — переносит в конец.",
+            "<b>Настройки времени</b> — «Длительность пары» и «Минут на одного» считают лимит (сколько человек успеет).",
+            "<b>Завершить пару</b> — тем, кто остался в очереди и присутствовал: +1 ✗ и приоритет на след. занятие; отмеченным как отсутствующие — +1 Ø; очередь и отметки отсутствия очищаются.",
+            "<b>Сбросить статистику</b> — обнуляет ✓/✗/Ø, снимает приоритеты, очищает очередь и отметки отсутствия (нужно ввести «подтвердить»).",
+            "<b>Импорт</b> — загрузка JSON со студентами; текущая очередь/отсутствия чистятся.",
+            "<b>Сохранить в сайт</b> — создаёт бэкап в браузере. Внизу в «Бэкапы» — <i>Восстановить/Скачать/Удалить</i>. Хранится до 50 шт (старые удаляются).",
+            "<b>Авто-сохранение при выходе</b> — если были изменения, создаётся тихий бэкап; если осталась очередь или отмеченные отсутствующие — пара тихо завершается."
+          ],
+          help_legend: "Легенда: <span class=\"good\">✓ — выступил</span>, <span class=\"bad\">✗ — не успел</span>, <span class=\"absCnt\">Ø — отсутствовал</span>, бейдж <span class=\"star\" style=\"padding:2px 6px;\">приоритет</span> — первоочерёдный на следующий раз.",
+          help_storage: "Данные хранятся в этом браузере (localStorage). Чтобы перенести — скачайте бэкап («Скачать») и импортируйте на другом ПК («Импорт»).",
+          help_close: "Понятно",
+        },
+        en: {
+          app_title: "Seminar Randomizer",
+          import: "Import",
+          save_site: "Save on site",
+          help: "Help",
+          randomize: "Randomize",
+          end: "End session",
+          clear_queue: "Clear queue",
+          reset_stats: "Reset stats",
+          lang_title: "Language",
+          time_settings: "Time settings",
+          limit: "Limit: {n}",
+          pair_label: "Session length (min):",
+          per_label: "Minutes per student:",
+          calc_note: "Calc: floor(length / per student)",
+          students: "Students",
+          add_placeholder: "add a student",
+          add: "Add",
+          abs_mode: "absence marking mode",
+          hint_stats: "With absence mode on, click a name to mark absent (today). Stats: <span class=\"good\">✓ — spoke</span>, <span class=\"bad\">✗ — missed</span>, <span class=\"absCnt\">Ø — absent</span>.",
+          empty_list: "Empty",
+          queue_today: "Queue for today",
+          empty_queue: "Press Randomize",
+          hint_queue_abs: "Absentees don't go into the queue and don't get ✗.",
+          backups_btn: "Backups",
+          backups_hide: "Hide backups",
+          backups_title: "Backups (in browser)",
+          backups_empty: "Empty",
+          backups_count: "Saved backups: {n}",
+          save_now: "Save now",
+          saved_backup: "Backup saved in the browser.",
+          restore: "Restore",
+          download: "Download",
+          delete: "Delete",
+          delete_word: "Delete",
+          restore_confirm: "Restore this backup? This will overwrite current students/queue/settings. Type: подтвердить",
+          restored: "Backup restored.",
+          delete_confirm: "Delete this backup?",
+          not_found: "Backup not found.",
+          priority_tag: "priority",
+          performed: "Spoke ✓",
+          skip: "Skip →",
+          end_done: "Session ended. Stats updated. Absence marks cleared.",
+          reset_confirm: "Full reset for ALL: stats (✓/✗/Ø) → 0, priorities cleared, queue and absence marks cleared.\nGroup list and time settings are kept.\n\nType: подтвердить",
+          reset_done: "Reset done.",
+          cancelled: "Cancelled.",
+          bad_json: "Invalid JSON. Provide an array of {id?, name, carry?, spoke?, missed?, absences?} or {students:[...]}.",
+          read_fail: "Failed to read JSON.",
+          need_students: "Add students first.",
+          no_present: "No present students.",
+          queue_will_fit: "About {a} of {b} will fit",
+          count_badge: "({n})",
+          prio_badge: "priority: {n}",
+          abs_badge: "marked absent: {n}",
+          meta_backup: "({n} students, limit {pair}/{per})",
+          // Help
+          help_title: "How it works",
+          help_intro: "Keep order in seminars: queue, priorities, absence, and automatic tracking.",
+          help_items: [
+            "<b>Add a student</b> — type the name and press «+». Remove via the «–» button.",
+            "<b>Rename</b> — double‑click a name (Enter — save, Esc — cancel)",
+            "<b>Absence mode</b> — enable the checkbox and click a name. Absentees are excluded from the queue and don't receive ✗. Ø increases on «End session».",
+            "<b>Randomize</b> — builds the queue: first <i>priority</i> (those who missed previously), then others randomly.",
+            "<b>Queue</b>: «<i>Spoke ✓</i>» clears priority and adds ✓; «<i>Skip →</i>» sends to the end.",
+            "<b>Time settings</b> — length and per-student minutes compute the limit (who fits today).",
+            "<b>End session</b> — remaining present get ✗ and priority; marked absentees get Ø; queue & absence marks are cleared.",
+            "<b>Reset stats</b> — zeroes ✓/✗/Ø, clears priorities, queue and absence marks (type «подтвердить»).",
+            "<b>Import</b> — load JSON; queue/absence are cleared.",
+            "<b>Save on site</b> — creates a browser backup. In «Backups» below: <i>Restore/Download/Delete</i>. Up to 50 are kept (oldest removed).",
+            "<b>Auto-save on exit</b> — if there were changes, a silent backup is created; if queue/absentees remain, session is silently ended."
+          ],
+          help_legend: "Legend: <span class=\"good\">✓ — spoke</span>, <span class=\"bad\">✗ — missed</span>, <span class=\"absCnt\">Ø — absent</span>, <span class=\"star\" style=\"padding:2px 6px;\">priority</span> — goes first next time.",
+          help_storage: "Data lives in this browser (localStorage). To move: download a backup and import it on another PC.",
+          help_close: "Got it",
+        },
+        kk: {
+          app_title: "Seminar Randomizer",
+          import: "Импорттау",
+          save_site: "Сайтқа сақтау",
+          help: "Көмек",
+          randomize: "Кездейсоқ рет",
+          end: "Сабақты аяқтау",
+          clear_queue: "Кезекті тазарту",
+          reset_stats: "Статистиканы тазарту",
+          lang_title: "Тіл",
+          time_settings: "Уақыт баптауы",
+          limit: "Лимит: {n}",
+          pair_label: "Пара ұзақтығы (мин):",
+          per_label: "Бір адамға минут:",
+          calc_note: "Есеп: floor(ұзақтық / адам)",
+          students: "Студенттер",
+          add_placeholder: "студент қосу",
+          add: "Қосу",
+          abs_mode: "қатыспау белгілеу режимі",
+          hint_stats: "Қатыспау режимінде атты басып — бүгін қатыспады деп белгілеңіз. Статистика: <span class=\"good\">✓ — сөйледі</span>, <span class=\"bad\">✗ — үлгермеді</span>, <span class=\"absCnt\">Ø — болмады</span>.",
+          empty_list: "Әзірге бос",
+          queue_today: "Бүгінгі кезек",
+          empty_queue: "Кездейсоқ рет басыңыз",
+          hint_queue_abs: "Қатыспағандар кезекке кірмейді және ✗ қойылмайды.",
+          backups_btn: "Бэкаптар",
+          backups_hide: "Бэкаптарды жасыру",
+          backups_title: "Браузердегі бэкаптар",
+          backups_empty: "Әзірге бос",
+          backups_count: "Сақталған бэкаптар: {n}",
+          save_now: "Қазір сақтау",
+          saved_backup: "Бэкап браузерде сақталды.",
+          restore: "Қалпына келтіру",
+          download: "Жүктеп алу",
+          delete: "Жою",
+          delete_word: "Жою",
+          restore_confirm: "Осы бэкапты қалпына келтіру? Ағымдағы студенттер/кезек/баптаулардың үстінен жазады. Жазыңыз: подтвердить",
+          restored: "Бэкап қалпына келтірілді.",
+          delete_confirm: "Бұл бэкапты жою?",
+          not_found: "Бэкап табылмады.",
+          priority_tag: "приоритет",
+          performed: "Сөйледі ✓",
+          skip: "Өткізу →",
+          end_done: "Сабақ аяқталды. Статистика жаңарды. Қатыспау белгілері тазартылды.",
+          reset_confirm: "Толық тазарту (бәріне): статистика (✓/✗/Ø) → 0, приоритеттер өшіріледі, кезек пен қатыспау белгілері тазартылады.\nТізім және уақыт баптауы сақталады.\n\nЖазыңыз: подтвердить",
+          reset_done: "Тазарту орындалды.",
+          cancelled: "Болдырылмады.",
+          bad_json: "JSON дұрыс емес. {id?, name, carry?, spoke?, missed?, absences?} массиві немесе {students:[...]} керек.",
+          read_fail: "JSON оқу мүмкін болмады.",
+          need_students: "Алдымен студенттерді қосыңыз.",
+          no_present: "Қатысушылар жоқ.",
+          queue_will_fit: "Шамамен {a}/{b} үлгереді",
+          count_badge: "({n})",
+          prio_badge: "приоритет: {n}",
+          abs_badge: "қатыспаған: {n}",
+          meta_backup: "({n} студент, шек {pair}/{per})",
+          // Help
+          help_title: "Жүйе туралы",
+          help_intro: "Семинарда тәртіп: кезек, приоритет, қатыспау және автоматты есеп.",
+          help_items: [
+            "<b>Студент қосу</b> — атты жазып «+». Жою — жанындағы «–».",
+            "<b>Атын өзгерту</b> — атына екі рет басыңыз (Enter — сақтау, Esc — болдырмау)",
+            "<b>Қатыспау режимі</b> — құсбелгіні қосып, атты басыңыз. Қатыспағандар кезекке кірмейді, ✗ қойылмайды. Ø «Сабақты аяқтау» кезінде өседі.",
+            "<b>Кездейсоқ рет</b> — кезек құрылады: алдымен <i>приоритет</i> (өткенде үлгермегендер), кейін қалғандар.",
+            "<b>Кезек</b>: «<i>Сөйледі ✓</i>» — приоритетті алып тастайды және ✓ қосады; «<i>Өткізу →</i>» — соңына жібереді.",
+            "<b>Уақыт баптауы</b> — ұзақтық пен бір адамға минут лимитті есептейді.",
+            "<b>Сабақты аяқтау</b> — кезекте қалған қатысқандарға ✗ және приоритет; белгіленген қатыспағандарға Ø; кезек және белгілер тазарады.",
+            "<b>Статистиканы тазарту</b> — ✓/✗/Ø нөлге; приоритеттер, кезек және белгілер тазаланады («подтвердить» жазыңыз).",
+            "<b>Импорттау</b> — JSON жүктеу; кезек/қатыспау тазарады.",
+            "<b>Сайтқа сақтау</b> — браузерге бэкап. Төменде «Бэкаптар»: <i>Қалпына келтіру/Жүктеп алу/Жою</i>. 50 данаға дейін (ескілері өшіріледі).",
+            "<b>Шығарда авто-сақтау</b> — өзгерістер болса, тыныш бэкап жасалады; кезек/қатыспау қалса — сабақ тыныш аяқталады."
+          ],
+          help_legend: "Белгілер: <span class=\"good\">✓ — сөйледі</span>, <span class=\"bad\">✗ — үлгермеді</span>, <span class=\"absCnt\">Ø — болмады</span>, <span class=\"star\" style=\"padding:2px 6px;\">приоритет</span> — келесіде алға шығару.",
+          help_storage: "Дерек осы браузерде сақталады (localStorage). Басқа ПК-ға көшіру үшін бэкапты жүктеп алып, сонда импорттаңыз.",
+          help_close: "Түсіндім",
+        }
+      };
+
+      function getLang(){ return localStorage.getItem(LANG_KEY) || "ru"; }
+      function setLang(l){ localStorage.setItem(LANG_KEY, l); document.documentElement.lang = l; }
+
+      function t(key, params){
+        const l = getLang();
+        const pack = i18n[l] || i18n.ru;
+        let s = (pack[key] !== undefined ? pack[key] : (i18n.ru[key] || key));
+        if (params) for (const k in params){ s = s.replaceAll(`{${k}}`, params[k]); }
+        return s;
+      }
+
+      function locale(){
+        const l = getLang();
+        if (l === "ru") return "ru-RU";
+        if (l === "kk") return "kk-KZ";
+        return "en-US";
+      }
+
+      // ===== Storage keys =====
+      const KEY = "sr_step1_students";
+      const QKEY = "sr_step2_queue";
+      const SKEY = "sr_step3_settings";
+      const AKEY = "sr_step6_absent_today";
+      const BKEY = "sr_backups_v1";
+
+      // ===== DOM =====
+      const $hdrTitle = document.getElementById("hdrTitle");
+      const $importBtn = document.getElementById("importBtn");
+      const $saveBackupBtn = document.getElementById("saveBackupBtn");
+      const $helpBtn = document.getElementById("helpBtn");
+      const $langSel = document.getElementById("langSel");
+
+      const $randomize = document.getElementById("randomizeBtn");
+      const $endBtn = document.getElementById("endBtn");
+      const $clearQueue = document.getElementById("clearQueueBtn");
+      const $resetStats = document.getElementById("resetStatsBtn");
+
+      const $timeSettingsTitle = document.getElementById("timeSettingsTitle");
+      const $capInfo = document.getElementById("capInfo");
+      const $lblPair = document.getElementById("lblPair");
+      const $lblPer = document.getElementById("lblPer");
+      const $calcNote = document.getElementById("calcNote");
+      const $pairMin = document.getElementById("pairMin");
+      const $perMin = document.getElementById("perMin");
+
+      const $studentsTitle = document.getElementById("studentsTitle");
+      const $input = document.getElementById("input");
+      const $add = document.getElementById("addBtn");
+      const $toggleAbsMode = document.getElementById("toggleAbsMode");
+      const $absModeText = document.getElementById("absModeText");
+      const $hintStats = document.getElementById("hintStats");
+      const $list = document.getElementById("list");
+      const $emptyList = document.getElementById("emptyList");
+
+      const $queueTitle = document.getElementById("queueTitle");
+      const $queue = document.getElementById("queue");
+      const $emptyQueue = document.getElementById("emptyQueue");
+      const $queueCap = document.getElementById("queueCap");
+
+      const $toggleBackups = document.getElementById("toggleBackupsBtn");
+      const $backupsCard = document.getElementById("backupsCard");
+      const $backupsTitle = document.getElementById("backupsTitle");
+      const $binfo = document.getElementById("binfo");
+      const $backupsList = document.getElementById("backupsList");
+      const $saveBackup2 = document.getElementById("saveBackupBtn2");
+
+      const $count = document.getElementById("countBadge");
+      const $prioBadge = document.getElementById("prioBadge");
+      const $absBadge = document.getElementById("absBadge");
+
+      // Help overlay
+      const $help = document.getElementById("helpOverlay");
+      const $helpClose = document.getElementById("helpClose");
+      const $helpTitle = document.getElementById("helpTitle");
+      const $helpIntro = document.getElementById("helpIntro");
+      const $helpList = document.getElementById("helpList");
+      const $helpLegend = document.getElementById("helpLegend");
+      const $helpStorage = document.getElementById("helpStorage");
+
+      // ===== Utils =====
+      function uid(){ return (self.crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).slice(2)); }
+      function shuffle(arr){ const a=[...arr]; for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+      function nowISO(){ return new Date().toISOString(); }
+      function fmt(ts){ try{ const d=new Date(ts); return d.toLocaleString(locale()); }catch{ return ts; } }
+
+      // ===== State & storage =====
+      let dirty = false;
+      function markDirty(){ dirty = true; }
+
+      function ensureStudent(x){
+        if (typeof x === "string") return { id: uid(), name: x, carry: false, spoke: 0, missed: 0, absences: 0 };
+        return { 
+          id: x.id || uid(), 
+          name: (x.name || "").trim(), 
+          carry: !!x.carry,
+          spoke: Number.isFinite(+x.spoke) ? +x.spoke : 0,
+          missed: Number.isFinite(+x.missed) ? +x.missed : 0,
+          absences: Number.isFinite(+x.absences) ? +x.absences : 0,
+        };
+      }
+
+      function load(){ try{ const raw = localStorage.getItem(KEY); const arr = raw ? JSON.parse(raw) : []; return arr.map(ensureStudent);}catch(e){ return []; } }
+      function save(arr){ try{ localStorage.setItem(KEY, JSON.stringify(arr)); }catch(e){} }
+
+      function loadQ(){ try{ const raw = localStorage.getItem(QKEY); return raw ? JSON.parse(raw) : []; }catch(e){ return []; } }
+      function saveQ(arr){ try{ localStorage.setItem(QKEY, JSON.stringify(arr)); }catch(e){} }
+
+      function loadS(){ try{ const raw = localStorage.getItem(SKEY); if (!raw) return { pair: 100, per: 3 }; const o = JSON.parse(raw); return { pair: Number(o.pair) || 100, per: Math.max(1, Number(o.per) || 3) }; } catch { return { pair: 100, per: 3 }; } }
+      function saveS(o){ try{ localStorage.setItem(SKEY, JSON.stringify(o)); } catch {} }
+
+      function loadA(){ try{ const raw = localStorage.getItem(AKEY); const arr = raw ? JSON.parse(raw) : []; return new Set(Array.isArray(arr)?arr:[]);}catch(e){ return new Set(); } }
+      function saveA(set){ try{ localStorage.setItem(AKEY, JSON.stringify(Array.from(set))); }catch(e){} }
+
+      function loadB(){ try{ const raw = localStorage.getItem(BKEY); return raw ? JSON.parse(raw) : []; }catch(e){ return []; } }
+      function saveB(arr){ try{ localStorage.setItem(BKEY, JSON.stringify(arr)); }catch(e){} }
+
+      // ===== Data =====
+      let students = load();
+      let queue = loadQ();
+      let absentToday = loadA();
+
+      // ===== Rendering =====
+      function capacity(){ 
+        const pair = Math.max(1, Number($pairMin.value) || 100);
+        const per = Math.max(1, Number($perMin.value) || 3);
+        return Math.floor(pair / per);
+      }
+
+      function updateCaps(){
+        const cap = capacity();
+        $capInfo.textContent = t("limit", { n: cap });
+        $queueCap.textContent = queue.length ? t("queue_will_fit", { a: Math.min(cap, queue.length), b: queue.length }) : "";
+      }
+
+      function statsEl(s){
+        const box = document.createElement("span");
+        box.className = "stats";
+        const g = document.createElement("span");
+        g.className = "good";
+        g.textContent = `✓ ${s.spoke}`;
+        const b = document.createElement("span");
+        b.className = "bad";
+        b.textContent = `✗ ${s.missed}`;
+        const a = document.createElement("span");
+        a.className = "absCnt";
+        a.textContent = `Ø ${s.absences}`;
+        box.appendChild(g); box.appendChild(b); box.appendChild(a);
+        return box;
+      }
+
+      function updateBadges(){
+        $count.textContent = students.length ? t("count_badge", { n: students.length }) : "";
+        const prioCount = students.filter(s => s.carry).length;
+        $prioBadge.textContent = prioCount ? t("prio_badge", { n: prioCount }) : "";
+        const absCount = Array.from(absentToday).length;
+        $absBadge.textContent = absCount ? t("abs_badge", { n: absCount }) : "";
+      }
+
+      function render(items){
+        const renameHint = t('rename_hint');
+        $list.innerHTML = "";
+        updateBadges();
+        if(!items.length){
+          const li = document.createElement("li");
+          li.className = "empty";
+          li.textContent = t("empty_list");
+          $list.appendChild(li);
+          return;
+        }
+        for(const s of items){
+          const li = document.createElement("li");
+
+          const leftWrap = document.createElement("div");
+          leftWrap.className = "name";
+          if (absentToday.has(s.id)) leftWrap.classList.add("abs");
+          // name span for inline edit
+          const nameSpan = document.createElement("span");
+          nameSpan.textContent = s.name;
+          nameSpan.title = renameHint;
+          nameSpan.style.cursor = "text";
+          // inline rename on dblclick (only when absence mode is OFF)
+          nameSpan.addEventListener("dblclick", (ev) => {
+            ev.stopPropagation();
+            if ($toggleAbsMode.checked) return; // avoid conflicts with absence marking
+            const input = document.createElement("input");
+            input.type = "text";
+            input.className = "edit";
+            input.value = s.name;
+            nameSpan.replaceWith(input);
+            input.focus();
+            input.select();
+            const cancel = () => {
+              try { input.replaceWith(nameSpan); } catch {}
+            };
+            const commit = () => {
+              const v = (input.value || "").trim();
+              if (v && v !== s.name) {
+                const target = students.find(x => x.id === s.id);
+                if (target) { target.name = v; save(students); markDirty(); }
+                render(students);
+                renderQueue();
+                return;
+              }
+              cancel();
+            };
+            input.addEventListener("keydown", (e)=>{
+              if (e.key === "Enter") commit();
+              else if (e.key === "Escape") cancel();
+            });
+            input.addEventListener("blur", commit);
+          });
+          leftWrap.appendChild(nameSpan);
+          if (s.carry) {
+            const tag = document.createElement("span");
+            tag.className = "star";
+            tag.textContent = t("priority_tag");
+            leftWrap.appendChild(tag);
+          }
+          leftWrap.appendChild(statsEl(s));
+
+          // toggle absent on click when abs-mode is enabled
+          leftWrap.addEventListener("click", (ev) => {
+            if (ev && ev.detail && ev.detail > 1) return; // ignore double-clicks
+            if (ev && (ev.target && ev.target.tagName === 'INPUT')) return;
+            if (!$toggleAbsMode.checked) return;
+            if (absentToday.has(s.id)) absentToday.delete(s.id); else absentToday.add(s.id);
+            saveA(absentToday);
+            markDirty();
+            // remove from queue if marked absent
+            if (absentToday.has(s.id)) {
+              queue = queue.filter(x => x !== s.id);
+              saveQ(queue);
+              renderQueue();
+            }
+            render(students);
+          });
+
+          const btn = document.createElement("button");
+          btn.className = "del";
+          btn.textContent = "–";
+          btn.title = t("delete_word");
+          btn.setAttribute("aria-label", t("delete_word"));
+          btn.addEventListener("click", () => {
+            students = students.filter(x => x.id !== s.id);
+            save(students);
+            markDirty();
+            if (absentToday.has(s.id)) { absentToday.delete(s.id); saveA(absentToday); }
+            queue = queue.filter(id => id !== s.id);
+            saveQ(queue);
+            render(students);
+            renderQueue();
+          });
+
+          li.appendChild(leftWrap);
+          li.appendChild(btn);
+          $list.appendChild(li);
+        }
+      }
+
+      function renderQueue(){
+        $queue.innerHTML = "";
+        const cap = capacity();
+        if(!queue.length){
+          const li = document.createElement("li");
+          li.className = "empty";
+          li.textContent = t("empty_queue");
+          $queue.appendChild(li);
+          updateCaps();
+          return;
+        }
+        queue.forEach((id, idx) => {
+          const s = students.find(x => x.id === id);
+          if(!s) return;
+          const li = document.createElement("li");
+          if (idx < cap) li.classList.add("ok"); else li.classList.add("over");
+
+          const left = document.createElement("div");
+          left.className = "name";
+          if (absentToday.has(s.id)) left.classList.add("abs");
+          left.textContent = `${idx+1}. ${s.name}`;
+          if (s.carry) {
+            const tag = document.createElement("span");
+            tag.className = "star";
+            tag.textContent = t("priority_tag");
+            left.appendChild(tag);
+          }
+          left.appendChild(statsEl(s));
+
+          const buttons = document.createElement("div");
+
+          const ok = document.createElement("button");
+          ok.className = "btn small";
+          ok.textContent = t("performed");
+          ok.title = t("performed");
+          ok.addEventListener("click", () => {
+            queue = queue.filter(x => x !== id);
+            const st = students.find(x => x.id === id);
+            if (st) { st.spoke = (st.spoke||0) + 1; st.carry = false; }
+            save(students);
+            saveQ(queue);
+            markDirty();
+            render(students);
+            renderQueue();
+          });
+
+          const skip = document.createElement("button");
+          skip.className = "btn small";
+          skip.textContent = t("skip");
+          skip.title = t("skip");
+          skip.addEventListener("click", () => {
+            queue = queue.filter(x => x !== id);
+            queue.push(id);
+            saveQ(queue);
+            markDirty();
+            renderQueue();
+          });
+
+          buttons.appendChild(ok);
+          buttons.appendChild(skip);
+          li.appendChild(left);
+          li.appendChild(buttons);
+          $queue.appendChild(li);
+        });
+        updateCaps();
+      }
+
+      // ===== Backups =====
+      function renderBackups(){
+        const b = loadB();
+        $binfo.textContent = b.length ? t("backups_count", { n: b.length }) : t("backups_empty");
+        $backupsList.innerHTML = "";
+        if (!b.length) return;
+        for(const it of b){
+          const row = document.createElement("div");
+          row.className = "backupRow";
+          const meta = document.createElement("div");
+          meta.innerHTML = `<strong>${fmt(it.at)}</strong> <span class="backupMeta">${t("meta_backup", { n: (it.students||[]).length, pair: (it.settings?.pair||"-"), per: (it.settings?.per||"-") })}</span>`;
+          const actions = document.createElement("div");
+          const useBtn = document.createElement("button");
+          useBtn.className = "btn small";
+          useBtn.textContent = t("restore");
+          useBtn.addEventListener("click", () => restoreBackup(it.id));
+          const dlBtn = document.createElement("button");
+          dlBtn.className = "btn small";
+          dlBtn.textContent = t("download");
+          dlBtn.addEventListener("click", () => downloadBackup(it.id));
+          const delBtn = document.createElement("button");
+          delBtn.className = "btn small";
+          delBtn.textContent = t("delete");
+          delBtn.addEventListener("click", () => deleteBackup(it.id));
+          actions.appendChild(useBtn);
+          actions.appendChild(dlBtn);
+          actions.appendChild(delBtn);
+          row.appendChild(meta);
+          row.appendChild(actions);
+          $backupsList.appendChild(row);
+        }
+      }
+
+      function toggleBackups(){
+        const show = $backupsCard.style.display !== "block";
+        $backupsCard.style.display = show ? "block" : "none";
+        $toggleBackups.textContent = show ? t("backups_hide") : t("backups_btn");
+        $toggleBackups.title = show ? t("backups_hide") : t("backups_btn");
+        if (show) renderBackups();
+      }
+
+      function createBackup(silent){
+        const bk = {
+          id: uid(),
+          at: nowISO(),
+          students: students,
+          settings: loadS(),
+          queue: queue,
+          absent: Array.from(absentToday),
+          version: 1
+        };
+        const arr = loadB();
+        arr.unshift(bk);
+        saveB(arr.slice(0, 50)); // keep up to 50
+        if (!silent) alert(t("saved_backup"));
+      }
+
+      function restoreBackup(id){
+        const arr = loadB();
+        const it = arr.find(x => x.id === id);
+        if (!it) return alert(t("not_found"));
+        const ok = prompt(t("restore_confirm"), "");
+        if (ok !== "подтвердить") return alert(t("cancelled"));
+        students = (it.students || []).map(ensureStudent);
+        save(students);
+        if (it.settings) { saveS(it.settings); $pairMin.value = it.settings.pair; $perMin.value = it.settings.per; }
+        queue = Array.isArray(it.queue) ? it.queue : [];
+        saveQ(queue);
+        absentToday = new Set(Array.isArray(it.absent) ? it.absent : []);
+        saveA(absentToday);
+        render(students);
+        renderQueue();
+        updateBadges();
+        updateCaps();
+        alert(t("restored"));
+      }
+
+      function deleteBackup(id){
+        const arr = loadB();
+        const idx = arr.findIndex(x => x.id === id);
+        if (idx === -1) return;
+        const ok = confirm(t("delete_confirm"));
+        if (!ok) return;
+        arr.splice(idx,1);
+        saveB(arr);
+        renderBackups();
+      }
+
+      function downloadBackup(id){
+        const arr = loadB();
+        const it = arr.find(x => x.id === id);
+        if (!it) return alert(t("not_found"));
+        const data = JSON.stringify(it, null, 2);
+        const blob = new Blob([data], { type: "application/json" });
+        const a = document.createElement("a");
+        const stamp = (it.at || new Date().toISOString()).replace(/[:]/g, "-");
+        a.href = URL.createObjectURL(blob);
+        a.download = `backup_${stamp}.json`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      }
+
+      // ===== Renders & actions =====
+      function updateStaticTexts(){
+        document.title = t("app_title");
+        $hdrTitle.textContent = t("app_title");
+
+        $importBtn.textContent = t("import");
+        $saveBackupBtn.textContent = t("save_site");
+        $helpBtn.textContent = t("help");
+        $importBtn.title = t("import"); $saveBackupBtn.title = t("save_site"); $helpBtn.title = t("help");
+
+        $randomize.textContent = t("randomize");
+        $endBtn.textContent = t("end");
+        $clearQueue.textContent = t("clear_queue");
+        $resetStats.textContent = t("reset_stats");
+
+        $timeSettingsTitle.textContent = t("time_settings");
+        $lblPair.childNodes[0].textContent = t("pair_label")+" ";
+        $lblPer.childNodes[0].textContent = t("per_label")+" ";
+        $calcNote.textContent = t("calc_note");
+
+        $studentsTitle.textContent = t("students");
+        $input.placeholder = t("add_placeholder");
+        $absModeText.textContent = t("abs_mode");
+        $hintStats.innerHTML = t("hint_stats");
+        $emptyList.textContent = t("empty_list");
+        $add.title = t("add");
+        $add.setAttribute("aria-label", t("add"));
+
+        $queueTitle.textContent = t("queue_today");
+        $emptyQueue.textContent = t("empty_queue");
+        document.getElementById("hintQueueAbs").textContent = t("hint_queue_abs");
+
+        $toggleBackups.textContent = t("backups_btn");
+        $toggleBackups.title = t("backups_btn");
+        $backupsTitle.textContent = t("backups_title");
+        $binfo.textContent = t("backups_empty");
+        $saveBackup2.textContent = t("save_now");
+        $saveBackup2.title = t("save_now");
+
+        // Help
+        $helpTitle.textContent = t("help_title");
+        $helpIntro.textContent = t("help_intro");
+        $helpList.innerHTML = "";
+        for (const li of (i18n[getLang()].help_items || [])) {
+          const el = document.createElement("li"); el.innerHTML = li; $helpList.appendChild(el);
+        }
+        $helpLegend.innerHTML = t("help_legend");
+        $helpStorage.innerHTML = t("help_storage");
+        $helpClose.textContent = t("help_close");
+
+        updateCaps();
+        render(students);
+        renderQueue();
+      }
+
+      function add(){
+        const n = ($input.value || "").trim();
+        if(!n) return;
+        students.push({ id: uid(), name: n, carry: false, spoke: 0, missed: 0, absences: 0 });
+        save(students);
+        markDirty();
+        render(students);
+        $input.value = "";
+        $input.focus();
+      }
+
+      function importJSON(file){
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const text = e.target.result;
+            const parsed = JSON.parse(text);
+            let items = [];
+            if (Array.isArray(parsed)) {
+              items = parsed;
+            } else if (parsed && Array.isArray(parsed.students)) {
+              items = parsed.students;
+            } else {
+              alert(t("bad_json"));
+              return;
+            }
+            items = items.map(ensureStudent).filter(x => x.name);
+            students = items;
+            save(students);
+            markDirty();
+            queue = [];
+            absentToday = new Set();
+            saveQ(queue);
+            saveA(absentToday);
+            render(students);
+            renderQueue();
+            updateBadges();
+          } catch (err) {
+            alert(t("read_fail"));
+          }
+        };
+        reader.readAsText(file, "utf-8");
+      }
+
+      function randomizeQueue(){
+        if(!students.length){
+          alert(t("need_students"));
+          return;
+        }
+        const present = students.filter(s => !absentToday.has(s.id));
+        if(!present.length){ alert(t("no_present")); return; }
+        const prio = shuffle(present.filter(s => s.carry).map(s => s.id));
+        const rest = shuffle(present.filter(s => !s.carry).map(s => s.id));
+        queue = [...prio, ...rest];
+        saveQ(queue);
+        markDirty();
+        renderQueue();
+      }
+
+      function clearQueue(){
+        queue = [];
+        saveQ(queue);
+        markDirty();
+        renderQueue();
+      }
+
+      function endSession(opts){
+        const silent = opts && opts.silent;
+        const remaining = new Set(queue);
+        if (remaining.size) {
+          students = students.map(s => {
+            if (remaining.has(s.id) && !absentToday.has(s.id)) {
+              return { ...s, carry: true, missed: (s.missed||0) + 1 };
+            }
+            return s;
+          });
+        }
+        if (absentToday.size) {
+          students = students.map(s => absentToday.has(s.id) ? { ...s, absences: (s.absences||0) + 1 } : s);
+        }
+        save(students);
+        markDirty();
+        render(students);
+        clearQueue();
+        absentToday = new Set();
+        saveA(absentToday);
+        updateBadges();
+        render(students);
+        renderQueue();
+        updateCaps();
+        if (!silent) alert(t("end_done"));
+      }
+
+      function onSettingsChange(){
+        let pair = Math.max(1, Number($pairMin.value) || 100);
+        let per = Math.max(1, Number($perMin.value) || 3);
+        saveS({ pair, per });
+        markDirty();
+        renderQueue();
+        updateCaps();
+      }
+
+      // Auto finalize + backup on exit
+      function needAutoFinalize(){
+        return (queue && queue.length > 0) || (absentToday && absentToday.size > 0);
+      }
+      function autoFinalizeAndBackup(){
+        try {
+          if (needAutoFinalize()) { endSession({silent: true}); }
+          if (dirty) { createBackup(true); }
+        } catch (e) { /* no-op */ }
+      }
+      window.addEventListener("beforeunload", function(){
+        autoFinalizeAndBackup();
+      });
+
+      // Help open/close
+      function openHelp(){ $help.style.display = "flex"; }
+      function closeHelp(){ $help.style.display = "none"; }
+      $helpBtn.addEventListener("click", openHelp);
+      $helpClose.addEventListener("click", closeHelp);
+      $help.addEventListener("click", (e)=>{ if (e.target === $help) closeHelp(); });
+      document.addEventListener("keydown", (e)=>{
+        if (e.key === "Escape") closeHelp();
+        if (e.key === '?' || (e.shiftKey && e.key === '/')) openHelp();
+      });
+
+      // Bindings
+      const $file = document.getElementById("fileInput");
+      $importBtn.addEventListener("click", () => $file.click());
+      $file.addEventListener("change", () => {
+        if ($file.files && $file.files[0]) importJSON($file.files[0]);
+        $file.value = "";
+      });
+
+      document.getElementById("saveBackupBtn").addEventListener("click", () => createBackup(false));
+      $saveBackup2.addEventListener("click", () => createBackup(false));
+      $toggleBackups.addEventListener("click", toggleBackups);
+
+      $randomize.addEventListener("click", randomizeQueue);
+      $clearQueue.addEventListener("click", clearQueue);
+      $endBtn.addEventListener("click", () => endSession({silent:false}));
+      $resetStats.addEventListener("click", () => {
+        const phrase = prompt(t("reset_confirm"), "");
+        if (phrase !== "подтвердить") { alert(t("cancelled")); return; }
+        students = students.map(s => ({ ...s, spoke: 0, missed: 0, absences: 0, carry: false }));
+        save(students);
+        markDirty();
+        queue = [];
+        saveQ(queue);
+        absentToday = new Set();
+        saveA(absentToday);
+        render(students);
+        renderQueue();
+        updateBadges();
+        updateCaps();
+        alert(t("reset_done"));
+      });
+      ["input","change"].forEach(ev => {
+        $pairMin.addEventListener(ev, onSettingsChange);
+        $perMin.addEventListener(ev, onSettingsChange);
+      });
+
+      document.getElementById("addBtn").addEventListener("click", add);
+      document.getElementById("input").addEventListener("keydown", (e) => { if(e.key === "Enter") add(); });
+
+      // Init
+      $langSel.value = getLang();
+      $langSel.title = t("lang_title");
+      $langSel.addEventListener("change", () => {
+        setLang($langSel.value);
+        updateStaticTexts();
+      });
+
+      const settings = loadS();
+      $pairMin.value = settings.pair;
+      $perMin.value = settings.per;
+
+      render(students);
+      if (queue.length && absentToday.size) {
+        queue = queue.filter(id => !absentToday.has(id));
+        saveQ(queue);
+      }
+      renderQueue();
+      updateCaps();
+      updateBadges();
+      updateStaticTexts();
+
+      // Ensure backups panel is hidden at start
+      $backupsCard.style.display = "none";
+    })();
+  </script>
+</body>
+</html>

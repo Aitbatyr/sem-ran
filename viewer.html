@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Queue Viewer</title>
+  <style>
+    :root{ --bg:#0b1220; --card:#0f172a; --text:#e5e7eb; --muted:#94a3b8; --ok:#052e16; --over:#111827; }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
+    body{background:var(--bg);color:var(--text);display:grid;place-items:start center;padding:16px}
+    .wrap{width:min(820px,100%);display:grid;gap:14px}
+    h1{font-size:20px;margin:8px 0 0;text-align:center}
+    .card{background:var(--card);border:1px solid #1f2937;border-radius:14px;box-shadow:0 1px 2px rgb(0 0 0 / 35%)}
+    .card h2{margin:0;font-size:16px;padding:12px 14px;border-bottom:1px solid #1f2937;display:flex;justify-content:space-between;align-items:center}
+    .section{display:grid;gap:8px;padding:12px}
+    ul{list-style:none;margin:0;padding:0}
+    li{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-top:1px solid #1f2937}
+    li:first-child{border-top:0}
+    .ok{background:var(--ok)}
+    .over{background:var(--over)}
+    .name{display:flex;align-items:center;gap:8px}
+    .cap{font-size:12px;color:var(--muted)}
+    .star{font-size:11px;background:#f59e0b;color:#1f2937;padding:2px 6px;border-radius:999px}
+    .time{font-size:12px;color:var(--muted)}
+    .row{display:flex;gap:8px;align-items:center;justify-content:space-between}
+    .btn{border:1px solid #1f2937;background:#0b1220;color:#e5e7eb;padding:8px 10px;border-radius:999px;cursor:pointer}
+    .btn:active{transform:translateY(1px)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1 id="ttl">Очередь (только просмотр)</h1>
+    <div class="card">
+      <h2><span id="hdr">Сегодняшняя очередь</span> <span class="cap" id="cap"></span></h2>
+      <div class="section">
+        <div class="row">
+          <span class="time" id="ts"></span>
+          <div>
+            <button class="btn" onclick="location.reload()">Обновить</button>
+          </div>
+        </div>
+        <ul id="list"><li class="cap">Нет данных. Откройте ссылку, которую дал преподаватель.</li></ul>
+      </div>
+    </div>
+  </div>
+<script>
+(function(){
+  function fromB64(s){
+    try{
+      const bin = atob(s);
+      const bytes = new Uint8Array(bin.length);
+      for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+      const str = new TextDecoder().decode(bytes);
+      return JSON.parse(str);
+    }catch(e){ return null; }
+  }
+  function el(tag, cls, txt){ const x = document.createElement(tag); if(cls) x.className = cls; if(txt!=null) x.textContent = txt; return x; }
+  const h = location.hash.startsWith("#") ? location.hash.slice(1) : "";
+  const data = h ? fromB64(h) : null;
+  const $cap = document.getElementById("cap");
+  const $ts = document.getElementById("ts");
+  const $list = document.getElementById("list");
+  if(!data || !Array.isArray(data.queue)){
+    $list.innerHTML = '<li class="cap">Нет данных. Откройте ссылку, которую дал преподаватель.</li>';
+    return;
+  }
+  $cap.textContent = `Успеют ≈ ${Math.min(data.cap || 0, data.queue.length)} из ${data.queue.length}`;
+  $ts.textContent = new Date(data.at || Date.now()).toLocaleString();
+  $list.innerHTML = "";
+  (data.queue || []).forEach((it, idx) => {
+    const li = el("li", idx < (data.cap||0) ? "ok" : "over");
+    const left = el("div", "name");
+    left.textContent = `${idx+1}. ${it.name || "—"}`;
+    if (it.prio) { left.appendChild(el("span","star","приоритет")); }
+    li.appendChild(left);
+    $list.appendChild(li);
+  });
+})();
+</script>
+</body>
+</html>

@@ -18,12 +18,14 @@
       --good: #16a34a;
       --bad: #dc2626;
       --abs: #475569;
+      --hl: #2563eb; /* мягкий акцент для Sem / Ran */
     }
     * { box-sizing: border-box; }
-    html, body { height: 100%; margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif; color: var(--text); }
+    html, body { height: 100%; margin: 0; font-family: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif; color: var(--text); }
     body { background: var(--bg); display: grid; place-items: start center; padding: 16px; }
     .wrap { width: min(1160px, 100%); display: grid; gap: 16px; }
     h1 { text-align: center; font-size: 22px; margin: 6px 0 0; }
+    .hl { color: var(--hl); filter: saturate(.85); }
     .row { display: flex; gap: 10px; justify-content: center; align-items: center; }
     .toolbar { justify-content: space-between; flex-wrap: wrap; }
     .input, .num, .sel {
@@ -80,16 +82,8 @@
     @media (max-width: 940px){ .cols{ grid-template-columns: 1fr; } }
     .settings { display:flex; gap:10px; align-items:center; flex-wrap: wrap; }
     .settings label { display:flex; align-items:center; gap:6px; color:#334155; font-size:14px; }
-    /* Inline edit */
     .edit{ padding:6px 8px; font-size:14px; border:1px solid var(--border); border-radius:8px; outline:none; }
     .edit:focus{ border-color: var(--ring); box-shadow: 0 0 0 3px rgb(56 189 248 / 25%);}
-    /* Backups + Help */
-    #backupsCard { display:none; }
-    .backupMeta { font-size: 12px; color: var(--muted); }
-    .backupRow { display:flex; gap:10px; align-items:center; justify-content: space-between; padding: 10px 0; border-top: 1px solid var(--border); }
-    .backupRow:first-child { border-top: 0; }
-    .helpOverlay{position:fixed; inset:0; background:rgba(15,23,42,.55); display:none; align-items:center; justify-content:center; padding:16px; z-index:1000;}
-    .helpCard{width:min(900px,100%); max-height:80vh; overflow:auto;}
   </style>
 </head>
 <body>
@@ -98,17 +92,17 @@
 
     <div class="row toolbar">
       <div class="row">
-        <button id="importBtn" class="btn" title="">Импорт</button>
+        <button id="importBtn" class="btn">Импорт</button>
         <input id="fileInput" type="file" accept=".json,application/json" hidden>
-        <button id="saveBackupBtn" class="btn" title="">Сохранить в сайт</button>
-        <button id="helpBtn" class="btn" title="">Помощь</button>
+        <button id="exportBtn" class="btn">Экспорт</button>
+        <button id="helpBtn" class="btn">Помощь</button>
       </div>
       <div class="queueControls">
-        <button id="randomizeBtn" class="btn primary" title="">Randomize</button>
-        <button id="shareBtn" class="btn" title="">Поделиться</button>
-        <button id="endBtn" class="btn danger" title="">Завершить пару</button>
-        <button id="clearQueueBtn" class="btn" title="">Сбросить очередь</button>
-        <button id="resetStatsBtn" class="btn danger" title="">Сбросить статистику</button>
+        <button id="randomizeBtn" class="btn primary">Randomize</button>
+        <button id="shareBtn" class="btn">Поделиться</button>
+        <button id="endBtn" class="btn danger">Завершить пару</button>
+        <button id="clearQueueBtn" class="btn">Сбросить очередь</button>
+        <button id="resetStatsBtn" class="btn danger">Сбросить статистику</button>
         <select id="langSel" class="sel" title="">
           <option value="ru">Рус</option>
           <option value="en">Eng</option>
@@ -123,6 +117,7 @@
         <label id="lblPair"><span>Длительность пары (мин):</span> <input id="pairMin" class="num" type="number" min="10" step="5" value="100"></label>
         <label id="lblPer"><span>Минут на одного:</span> <input id="perMin" class="num" type="number" min="1" step="1" value="3"></label>
         <span class="chip" id="calcNote"></span>
+        <label><input type="checkbox" id="autoExport"> <span id="lblAutoExport">Автоэкспорт при завершении</span></label>
       </div>
     </div>
 
@@ -159,28 +154,15 @@
       </div>
     </div>
 
-    <div class="row" style="justify-content:center; margin-top:-4px;">
-      <button id="toggleBackupsBtn" class="btn" title="">Бэкапы</button>
-    </div>
-    <div id="backupsCard" class="card">
-      <h2 id="backupsTitle">Бэкапы (внутри сайта)</h2>
-      <div class="section">
-        <div class="row" style="justify-content: space-between;">
-          <span class="backupMeta" id="binfo">Пока пусто</span>
-          <button id="saveBackupBtn2" class="btn" title="">Сохранить сейчас</button>
-        </div>
-        <div id="backupsList"></div>
-      </div>
-    </div>
-
-    <div id="helpOverlay" class="helpOverlay" style="display:none;">
-      <div class="card helpCard">
+    <div id="helpOverlay" class="helpOverlay" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,.55); align-items:center; justify-content:center; padding:16px; z-index:1000;">
+      <div class="card" style="width:min(900px,100%); max-height:80vh; overflow:auto;">
         <h2 id="helpTitle">Справка по системе</h2>
         <div class="section" style="gap:10px;">
           <div id="helpIntro"></div>
           <ul id="helpList" style="margin-left:16px;"></ul>
           <div id="helpLegend" class="hint"></div>
           <div id="helpStorage" class="hint"></div>
+          <div id="helpContact" class="hint"></div>
           <div class="row" style="justify-content:flex-end; gap:8px;">
             <button id="helpClose" class="btn">Понятно</button>
           </div>
@@ -197,7 +179,7 @@
         ru: {
           app_title: "Seminar Randomizer",
           import: "Импорт",
-          save_site: "Сохранить в сайт",
+          export: "Экспорт",
           help: "Помощь",
           randomize: "Randomize",
           share: "Поделиться",
@@ -205,12 +187,14 @@
           end: "Завершить пару",
           clear_queue: "Сбросить очередь",
           reset_stats: "Сбросить статистику",
+          end_done: "Пара завершена.",
           lang_title: "Язык",
           time_settings: "Настройки времени",
           limit: "Лимит: {n}",
           pair_label: "Длительность пары (мин):",
           per_label: "Минут на одного:",
           calc_note: "Расчёт: floor(длительность / на одного)",
+          auto_export: "Автоэкспорт при завершении",
           students: "Студенты",
           add_placeholder: "добавить студента",
           add: "Добавить",
@@ -220,37 +204,10 @@
           queue_today: "Очередь на сегодня",
           empty_queue: "Нажмите Randomize",
           hint_queue_abs: "Отсутствующие НЕ попадают в очередь и им не начисляется ✗.",
-          backups_btn: "Бэкапы",
-          backups_hide: "Скрыть бэкапы",
-          backups_title: "Бэкапы (внутри сайта)",
-          backups_empty: "Пока пусто",
-          backups_count: "Сохранено бэкапов: {n}",
-          save_now: "Сохранить сейчас",
-          saved_backup: "Бэкап сохранён внутри сайта.",
-          restore: "Восстановить",
-          download: "Скачать",
-          delete: "Удалить",
-          delete_word: "Удалить",
-          restore_confirm: "Восстановить этот бэкап? Это перезапишет текущих студентов/очередь/настройки. Напишите: подтвердить",
-          restored: "Бэкап восстановлен.",
-          delete_confirm: "Удалить этот бэкап?",
-          not_found: "Бэкап не найден.",
-          priority_tag: "приоритет",
-          performed: "Выступил ✓",
-          skip: "Пропустить →",
-          end_done: "Пара завершена. Обновлена статистика. Отметки отсутствия сброшены.",
-          reset_confirm: "Полный сброс у ВСЕХ: статистика (✓/✗/Ø) → 0, приоритеты сняты, очередь и отметки отсутствия очищены.\nСписок и настройки времени не меняются.\n\nДля подтверждения введите слово: подтвердить",
-          reset_done: "Сброс выполнен.",
-          cancelled: "Отменено.",
-          bad_json: "Неверный формат JSON. Нужен массив объектов {id?, name, carry?, spoke?, missed?, absences?} или {students:[...] }.",
-          read_fail: "Не удалось прочитать JSON.",
-          need_students: "Сначала добавьте студентов.",
-          no_present: "Никого из присутствующих нет.",
-          queue_will_fit: "Успеют ≈ {a} из {b}",
-          count_badge: "({n})",
           prio_badge: "приоритет: {n}",
           abs_badge: "отмечены отсутствующие: {n}",
-          meta_backup: "({n} студентов, лимит {pair}/{per})",
+          count_badge: "({n})",
+          queue_will_fit: "Успеют ≈ {a} из {b}",
           help_title: "Справка по системе",
           help_intro: "Для порядка на семинаре: очередь, приоритеты, отсутствие, автоматический учёт.",
           help_items: [
@@ -260,22 +217,31 @@
             "<b>Randomize</b> — формирует очередь: сначала <i>приоритетные</i>, затем остальные случайно.",
             "<b>Очередь</b>: «<i>Выступил ✓</i>» — снимает приоритет и +1 к ✓; «<i>Пропустить →</i>» — переносит в конец.",
             "<b>Настройки времени</b> — «Длительность пары» и «Минут на одного» считают лимит (сколько человек успеет).",
-            "<b>Поделиться</b> — создаёт ссылку‑снимок текущей очереди (страница viewer.html). При изменениях создайте новую ссылку.",
+            "<b>Поделиться</b> — создаёт ссылку‑снимок текущей очереди (viewer.html).",
             "<b>Завершить пару</b> — тем, кто остался в очереди и присутствовал: +1 ✗ и приоритет; отмеченным как отсутствующие — +1 Ø; очередь/отметки очищаются.",
             "<b>Сбросить статистику</b> — обнуляет ✓/✗/Ø, снимает приоритеты, очищает очередь и отметки отсутствия (нужно ввести «подтвердить»).",
-            "<b>Импорт</b> — загрузка JSON со студентами; текущая очередь/отсутствия чистятся.",
-            "<b>Сохранить в сайт</b> — создаёт бэкап в браузере. Внизу в «Бэкапы»: <i>Восстановить/Скачать/Удалить</i>. До 50 шт (старые удаляются).",
-            "<b>Авто-сохранение при выходе</b> — если были изменения, создаётся тихий бэкап; если осталась очередь или отмеченные отсутствующие — пара тихо завершается."
+            "<b>Импорт/Экспорт</b> — перенос данных между устройствами. Экспорт сохраняет всех студентов, очередь, настройки, отметки и язык."
           ],
-          help_legend: "Легенда: <span class=\"good\">✓ — выступил</span>, <span class=\"bad\">✗ — не успел</span>, <span class=\"absCnt\">Ø — отсутствовал</span>, <span class=\"star\" style=\"padding:2px 6px;\">приоритет</span> — первоочерёдный на следующий раз.",
-          help_storage: "Данные хранятся в этом браузере (localStorage). Чтобы перенести — скачайте бэкап («Скачать») и импортируйте на другом ПК («Импорт»).",
+          help_legend: "Легенда: <span class=\"good\">✓ — выступил</span>, <span class=\"bad\">✗ — не успел</span>, <span class=\"absCnt\">Ø — отсутствовал</span>, <span class=\"star\" style=\"padding:2px 6px;\">приоритет</span>.",
+          help_storage: "Данные хранятся в этом браузере (localStorage). Для переноса — Экспорт → Импорт на другом ПК.",
+          help_contact: "Если заметили неисправности в работе сайте или есть предложения по поводу улучшения сайте то напиши об этом на почту <b>aitbatyr.i@gmail.com</b>.",
           help_close: "Понятно",
-          rename_hint: "Двойной клик по имени — переименовать. Enter — сохранить, Esc — отменить."
+          rename_hint: "Двойной клик по имени — переименовать. Enter — сохранить, Esc — отменить.",
+          reset_confirm: "Полный сброс у ВСЕХ: статистика (✓/✗/Ø) → 0, приоритеты сняты, очередь и отметки отсутствия очищены.\nСписок и настройки времени не меняются.\n\nДля подтверждения введите слово: подтвердить",
+          reset_done: "Сброс выполнен.",
+          cancelled: "Отменено.",
+          need_students: "Сначала добавьте студентов.",
+          no_present: "Никого из присутствующих нет.",
+          performed: "Выступил ✓",
+          skip: "Пропустить →",
+          delete_word: "Удалить",
+          bad_json: "Неверный формат JSON.",
+          read_fail: "Не удалось прочитать JSON."
         },
         en: {
           app_title: "Seminar Randomizer",
           import: "Import",
-          save_site: "Save on site",
+          export: "Export",
           help: "Help",
           randomize: "Randomize",
           share: "Share",
@@ -283,12 +249,14 @@
           end: "End session",
           clear_queue: "Clear queue",
           reset_stats: "Reset stats",
+          end_done: "Session finalized.",
           lang_title: "Language",
           time_settings: "Time settings",
           limit: "Limit: {n}",
           pair_label: "Session length (min):",
           per_label: "Minutes per student:",
           calc_note: "Calc: floor(length / per student)",
+          auto_export: "Auto‑export on end",
           students: "Students",
           add_placeholder: "add a student",
           add: "Add",
@@ -298,37 +266,10 @@
           queue_today: "Queue for today",
           empty_queue: "Press Randomize",
           hint_queue_abs: "Absentees don't go into the queue and don't get ✗.",
-          backups_btn: "Backups",
-          backups_hide: "Hide backups",
-          backups_title: "Backups (in browser)",
-          backups_empty: "Empty",
-          backups_count: "Saved backups: {n}",
-          save_now: "Save now",
-          saved_backup: "Backup saved in the browser.",
-          restore: "Restore",
-          download: "Download",
-          delete: "Delete",
-          delete_word: "Delete",
-          restore_confirm: "Restore this backup? This will overwrite current students/queue/settings. Type: подтвердить",
-          restored: "Backup restored.",
-          delete_confirm: "Delete this backup?",
-          not_found: "Backup not found.",
-          priority_tag: "priority",
-          performed: "Spoke ✓",
-          skip: "Skip →",
-          end_done: "Session ended. Stats updated. Absence marks cleared.",
-          reset_confirm: "Full reset for ALL: stats (✓/✗/Ø) → 0, priorities cleared, queue and absence marks cleared.\nGroup list and time settings are kept.\n\nType: подтвердить",
-          reset_done: "Reset done.",
-          cancelled: "Cancelled.",
-          bad_json: "Invalid JSON. Provide an array of {id?, name, carry?, spoke?, missed?, absences?} or {students:[...]}.",
-          read_fail: "Failed to read JSON.",
-          need_students: "Add students first.",
-          no_present: "No present students.",
-          queue_will_fit: "About {a} of {b} will fit",
-          count_badge: "({n})",
           prio_badge: "priority: {n}",
           abs_badge: "marked absent: {n}",
-          meta_backup: "({n} students, limit {pair}/{per})",
+          count_badge: "({n})",
+          queue_will_fit: "About {a} of {b} will fit",
           help_title: "How it works",
           help_intro: "Keep order in seminars: queue, priorities, absence, and automatic tracking.",
           help_items: [
@@ -338,22 +279,31 @@
             "<b>Randomize</b> — builds the queue: first <i>priority</i>, then others randomly.",
             "<b>Queue</b>: «<i>Spoke ✓</i>» clears priority and adds ✓; «<i>Skip →</i>» sends to the end.",
             "<b>Time settings</b> — length and per-student minutes compute the limit.",
-            "<b>Share</b> — creates a snapshot link to viewer.html. If queue changes, create a new link.",
+            "<b>Share</b> — creates a snapshot link to viewer.html.",
             "<b>End session</b> — remaining present get ✗ and priority; marked absentees get Ø; queue & absence marks are cleared.",
             "<b>Reset stats</b> — zeroes ✓/✗/Ø, clears priorities, queue and absence marks (type «подтвердить»).",
-            "<b>Import</b> — load JSON; queue/absence are cleared.",
-            "<b>Save on site</b> — creates a browser backup. In «Backups»: <i>Restore/Download/Delete</i>. Up to 50 are kept (oldest removed).",
-            "<b>Auto-save on exit</b> — if there were changes, a silent backup is created; if queue/absentees remain, session is silently ended."
+            "<b>Import/Export</b> — move data across devices. Export saves students, queue, settings, marks, and language."
           ],
-          help_legend: "Legend: <span class=\"good\">✓ — spoke</span>, <span class=\"bad\">✗ — missed</span>, <span class=\"absCnt\">Ø — absent</span>, <span class=\"star\" style=\"padding:2px 6px;\">priority</span> — goes first next time.",
-          help_storage: "Data lives in this browser (localStorage). To move: download a backup and import it on another PC.",
+          help_legend: "Legend: <span class=\"good\">✓ — spoke</span>, <span class=\"bad\">✗ — missed</span>, <span class=\"absCnt\">Ø — absent</span>, <span class=\"star\" style=\"padding:2px 6px;\">priority</span>.",
+          help_storage: "Data lives in this browser (localStorage). Use Export/Import to transfer.",
+          help_contact: "If you notice issues or have ideas, email <b>aitbatyr.i@gmail.com</b>.",
           help_close: "Got it",
-          rename_hint: "Double‑click a name to rename. Enter to save, Esc to cancel."
+          rename_hint: "Double‑click a name to rename. Enter to save, Esc to cancel.",
+          reset_confirm: "Full reset for ALL: stats (✓/✗/Ø) → 0, priorities cleared, queue and absence marks cleared.\nGroup list and time settings are kept.\n\nType: подтвердить",
+          reset_done: "Reset done.",
+          cancelled: "Cancelled.",
+          need_students: "Add students first.",
+          no_present: "No present students.",
+          performed: "Spoke ✓",
+          skip: "Skip →",
+          delete_word: "Delete",
+          bad_json: "Invalid JSON.",
+          read_fail: "Failed to read JSON."
         },
         kk: {
           app_title: "Seminar Randomizer",
           import: "Импорттау",
-          save_site: "Сайтқа сақтау",
+          export: "Экспорт",
           help: "Көмек",
           randomize: "Кездейсоқ рет",
           share: "Бөлісу",
@@ -361,12 +311,14 @@
           end: "Сабақты аяқтау",
           clear_queue: "Кезекті тазарту",
           reset_stats: "Статистиканы тазарту",
+          end_done: "Сабақ аяқталды.",
           lang_title: "Тіл",
           time_settings: "Уақыт баптауы",
           limit: "Лимит: {n}",
           pair_label: "Пара ұзақтығы (мин):",
           per_label: "Бір адамға минут:",
           calc_note: "Есеп: floor(ұзақтық / адам)",
+          auto_export: "Соңында автоэкспорт",
           students: "Студенттер",
           add_placeholder: "студент қосу",
           add: "Қосу",
@@ -376,37 +328,10 @@
           queue_today: "Бүгінгі кезек",
           empty_queue: "Кездейсоқ рет басыңыз",
           hint_queue_abs: "Қатыспағандар кезекке кірмейді және ✗ қойылмайды.",
-          backups_btn: "Бэкаптар",
-          backups_hide: "Бэкаптарды жасыру",
-          backups_title: "Браузердегі бэкаптар",
-          backups_empty: "Әзірге бос",
-          backups_count: "Сақталған бэкаптар: {n}",
-          save_now: "Қазір сақтау",
-          saved_backup: "Бэкап браузерде сақталды.",
-          restore: "Қалпына келтіру",
-          download: "Жүктеп алу",
-          delete: "Жою",
-          delete_word: "Жою",
-          restore_confirm: "Осы бэкапты қалпына келтіру? Ағымдағы студенттер/кезек/баптаулардың үстінен жазады. Жазыңыз: подтвердить",
-          restored: "Бэкап қалпына келтірілді.",
-          delete_confirm: "Бұл бэкапты жою?",
-          not_found: "Бэкап табылмады.",
-          priority_tag: "приоритет",
-          performed: "Сөйледі ✓",
-          skip: "Өткізу →",
-          end_done: "Сабақ аяқталды. Статистика жаңарды. Қатыспау белгілері тазартылды.",
-          reset_confirm: "Толық тазарту (бәріне): статистика (✓/✗/Ø) → 0, приоритеттер өшіріледі, кезек пен қатыспау белгілері тазарады.\nТізім және уақыт баптауы сақталады.\n\nЖазыңыз: подтвердить",
-          reset_done: "Тазарту орындалды.",
-          cancelled: "Болдырылмады.",
-          bad_json: "JSON дұрыс емес. {id?, name, carry?, spoke?, missed?, absences?} массиві немесе {students:[...]} керек.",
-          read_fail: "JSON оқу мүмкін болмады.",
-          need_students: "Алдымен студенттерді қосыңыз.",
-          no_present: "Қатысушылар жоқ.",
-          queue_will_fit: "Шамамен {a}/{b} үлгереді",
-          count_badge: "({n})",
           prio_badge: "приоритет: {n}",
           abs_badge: "қатыспаған: {n}",
-          meta_backup: "({n} студент, шек {pair}/{per})",
+          count_badge: "({n})",
+          queue_will_fit: "Шамамен {a}/{b} үлгереді",
           help_title: "Жүйе туралы",
           help_intro: "Семинарда тәртіп: кезек, приоритет, қатыспау және автоматты есеп.",
           help_items: [
@@ -416,17 +341,26 @@
             "<b>Кездейсоқ рет</b> — кезек құрылады: алдымен <i>приоритет</i>, кейін қалғандар.",
             "<b>Кезек</b>: «<i>Сөйледі ✓</i>» — приоритетті алып тастайды және ✓ қосады; «<i>Өткізу →</i>» — соңына жібереді.",
             "<b>Уақыт баптауы</b> — ұзақтық пен бір адамға минут лимитті есептейді.",
-            "<b>Бөлісу</b> — ағымдағы кезектің сілтеме-суретін жасайды (viewer.html). Өзгерсе — жаңа сілтеме жасаңыз.",
+            "<b>Бөлісу</b> — viewer.html бетіне сілтеме-сурет жасайды.",
             "<b>Сабақты аяқтау</b> — кезекте қалған қатысқандарға ✗ және приоритет; белгіленген қатыспағандарға Ø; кезек және белгілер тазарады.",
             "<b>Статистиканы тазарту</b> — ✓/✗/Ø нөлге; приоритеттер, кезек және белгілер тазаланады («подтвердить» жазыңыз).",
-            "<b>Импорттау</b> — JSON жүктеу; кезек/қатыспау тазарады.",
-            "<b>Сайтқа сақтау</b> — браузерге бэкап. Төменде «Бэкаптар»: <i>Қалпына келтіру/Жүктеп алу/Жою</i>. 50 данаға дейін (ескілері өшіріледі).",
-            "<b>Шығарда авто-сақтау</b> — өзгерістер болса, тыныш бэкап жасалады; кезек/қатыспау қалса — сабақ тыныш аяқталады."
+            "<b>Импорт/Экспорт</b> — құрылғылар арасында дерек көшіру. Экспорт студенттерді, кезекті, баптауларды, белгілер мен тілді сақтайды."
           ],
-          help_legend: "Белгілер: <span class=\"good\">✓ — сөйледі</span>, <span class=\"bad\">✗ — үлгермеді</span>, <span class=\"absCnt\">Ø — болмады</span>, <span class=\"star\" style=\"padding:2px 6px;\">приоритет</span> — келесіде алға шығару.",
-          help_storage: "Дерек осы браузерде сақталады (localStorage). Басқа ПК-ға көшіру үшін бэкапты жүктеп алып, сонда импорттаңыз.",
+          help_legend: "Белгілер: <span class=\"good\">✓ — сөйледі</span>, <span class=\"bad\">✗ — үлгермеді</span>, <span class=\"absCnt\">Ø — болмады</span>.",
+          help_storage: "Дерек осы браузерде сақталады (localStorage). Көшіру үшін — Экспорт/Импорт.",
+          help_contact: "Егер ақаулар байқасаңыз немесе ұсыныстарыңыз болса, осы адреске жазыңыз: <b>aitbatyr.i@gmail.com</b>.",
           help_close: "Түсіндім",
-          rename_hint: "Атын өзгерту үшін — екі рет басыңыз. Enter — сақтау, Esc — болдырмау."
+          rename_hint: "Атын өзгерту үшін — екі рет басыңыз. Enter — сақтау, Esc — болдырмау.",
+          reset_confirm: "Толық тазарту (бәріне): статистика (✓/✗/Ø) → 0, приоритеттер өшіріледі, кезек пен қатыспау белгілері тазарады.\nТізім және уақыт баптауы сақталады.\n\nЖазыңыз: подтвердить",
+          reset_done: "Тазарту орындалды.",
+          cancelled: "Болдырылмады.",
+          need_students: "Алдымен студенттерді қосыңыз.",
+          no_present: "Қатысушылар жоқ.",
+          performed: "Сөйледі ✓",
+          skip: "Өткізу →",
+          delete_word: "Жою",
+          bad_json: "JSON дұрыс емес.",
+          read_fail: "JSON оқу мүмкін болмады."
         }
       };
 
@@ -440,7 +374,6 @@
         if (params) for (const k in params){ s = s.replaceAll(`{${k}}`, params[k]); }
         return s;
       }
-
       function locale(){
         const l = getLang();
         if (l === "ru") return "ru-RU";
@@ -453,12 +386,12 @@
       const QKEY = "sr_step2_queue";
       const SKEY = "sr_step3_settings";
       const AKEY = "sr_step6_absent_today";
-      const BKEY = "sr_backups_v1";
+      const PKEY = "sr_pending_finalize";
 
       // ===== DOM =====
       const $hdrTitle = document.getElementById("hdrTitle");
       const $importBtn = document.getElementById("importBtn");
-      const $saveBackupBtn = document.getElementById("saveBackupBtn");
+      const $exportBtn = document.getElementById("exportBtn");
       const $helpBtn = document.getElementById("helpBtn");
       const $langSel = document.getElementById("langSel");
 
@@ -475,6 +408,8 @@
       const $calcNote = document.getElementById("calcNote");
       const $pairMin = document.getElementById("pairMin");
       const $perMin = document.getElementById("perMin");
+      const $autoExport = document.getElementById("autoExport");
+      const $lblAutoExport = document.getElementById("lblAutoExport");
 
       const $studentsTitle = document.getElementById("studentsTitle");
       const $input = document.getElementById("input");
@@ -490,36 +425,40 @@
       const $emptyQueue = document.getElementById("emptyQueue");
       const $queueCap = document.getElementById("queueCap");
 
-      const $toggleBackups = document.getElementById("toggleBackupsBtn");
-      const $backupsCard = document.getElementById("backupsCard");
-      const $backupsTitle = document.getElementById("backupsTitle");
-      const $binfo = document.getElementById("binfo");
-      const $backupsList = document.getElementById("backupsList");
-      const $saveBackup2 = document.getElementById("saveBackupBtn2");
-
       const $count = document.getElementById("countBadge");
       const $prioBadge = document.getElementById("prioBadge");
       const $absBadge = document.getElementById("absBadge");
-
-      // Help overlay
-      const $help = document.getElementById("helpOverlay");
-      const $helpClose = document.getElementById("helpClose");
-      const $helpTitle = document.getElementById("helpTitle");
-      const $helpIntro = document.getElementById("helpIntro");
-      const $helpList = document.getElementById("helpList");
-      const $helpLegend = document.getElementById("helpLegend");
-      const $helpStorage = document.getElementById("helpStorage");
 
       // ===== Utils =====
       function uid(){ return (self.crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).slice(2)); }
       function shuffle(arr){ const a=[...arr]; for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
       function nowISO(){ return new Date().toISOString(); }
-      function fmt(ts){ try{ const d=new Date(ts); return d.toLocaleString(locale()); }catch{ return ts; } }
 
-      // ===== State & storage =====
-      let dirty = false;
-      function markDirty(){ dirty = true; }
+      // ===== Title highlight =====
+      function decorateTitle(s){
+        const parts = (s||"").split(" ");
+        if (parts.length >= 2){
+          const a = parts[0], b = parts.slice(1).join(" ");
+          return `<span class="hl">${a.slice(0,3)}</span>${a.slice(3)} <span class="hl">${b.slice(0,3)}</span>${b.slice(3)}`;
+        }
+        return s;
+      }
 
+      function renderHelpTexts(){
+        document.getElementById("helpTitle").textContent = t("help_title");
+        document.getElementById("helpIntro").textContent = t("help_intro");
+        const $helpList = document.getElementById("helpList");
+        $helpList.innerHTML = "";
+        const items = (i18n[getLang()] && i18n[getLang()].help_items) || i18n.ru.help_items;
+        items.forEach(html => {
+          const li = document.createElement("li"); li.innerHTML = html; $helpList.appendChild(li);
+        });
+        document.getElementById("helpLegend").innerHTML = t("help_legend");
+        document.getElementById("helpStorage").innerHTML = t("help_storage");
+        document.getElementById("helpContact").innerHTML = t("help_contact");
+      }
+
+      // ===== Storage helpers =====
       function ensureStudent(x){
         if (typeof x === "string") return { id: uid(), name: x, carry: false, spoke: 0, missed: 0, absences: 0 };
         return { 
@@ -531,56 +470,40 @@
           absences: Number.isFinite(+x.absences) ? +x.absences : 0,
         };
       }
-
       function load(){ try{ const raw = localStorage.getItem(KEY); const arr = raw ? JSON.parse(raw) : []; return arr.map(ensureStudent);}catch(e){ return []; } }
       function save(arr){ try{ localStorage.setItem(KEY, JSON.stringify(arr)); }catch(e){} }
-
       function loadQ(){ try{ const raw = localStorage.getItem(QKEY); return raw ? JSON.parse(raw) : []; }catch(e){ return []; } }
       function saveQ(arr){ try{ localStorage.setItem(QKEY, JSON.stringify(arr)); }catch(e){} }
-
-      function loadS(){ try{ const raw = localStorage.getItem(SKEY); if (!raw) return { pair: 100, per: 3 }; const o = JSON.parse(raw); return { pair: Number(o.pair) || 100, per: Math.max(1, Number(o.per) || 3) }; } catch { return { pair: 100, per: 3 }; } }
+      function loadS(){ try{ const raw = localStorage.getItem(SKEY); if (!raw) return { pair: 100, per: 3, autoExport: false }; const o = JSON.parse(raw); return { pair: Number(o.pair)||100, per: Math.max(1, Number(o.per)||3), autoExport: !!o.autoExport }; } catch { return { pair: 100, per: 3, autoExport: false }; } }
       function saveS(o){ try{ localStorage.setItem(SKEY, JSON.stringify(o)); } catch {} }
-
       function loadA(){ try{ const raw = localStorage.getItem(AKEY); const arr = raw ? JSON.parse(raw) : []; return new Set(Array.isArray(arr)?arr:[]);}catch(e){ return new Set(); } }
       function saveA(set){ try{ localStorage.setItem(AKEY, JSON.stringify(Array.from(set))); }catch(e){} }
 
-      function loadB(){ try{ const raw = localStorage.getItem(BKEY); return raw ? JSON.parse(raw) : []; }catch(e){ return []; } }
-      function saveB(arr){ try{ localStorage.setItem(BKEY, JSON.stringify(arr)); }catch(e){} }
-
-      // ===== Data =====
+      // ===== State =====
       let students = load();
       let queue = loadQ();
       let absentToday = loadA();
 
-      // ===== Rendering =====
+      // ===== UI helpers =====
       function capacity(){ 
         const pair = Math.max(1, Number($pairMin.value) || 100);
         const per = Math.max(1, Number($perMin.value) || 3);
         return Math.floor(pair / per);
       }
-
       function updateCaps(){
         const cap = capacity();
         $capInfo.textContent = t("limit", { n: cap });
         $queueCap.textContent = queue.length ? t("queue_will_fit", { a: Math.min(cap, queue.length), b: queue.length }) : "";
       }
-
       function statsEl(s){
         const box = document.createElement("span");
         box.className = "stats";
-        const g = document.createElement("span");
-        g.className = "good";
-        g.textContent = `✓ ${s.spoke}`;
-        const b = document.createElement("span");
-        b.className = "bad";
-        b.textContent = `✗ ${s.missed}`;
-        const a = document.createElement("span");
-        a.className = "absCnt";
-        a.textContent = `Ø ${s.absences}`;
+        const g = document.createElement("span"); g.className = "good"; g.textContent = `✓ ${s.spoke}`;
+        const b = document.createElement("span"); b.className = "bad"; b.textContent = `✗ ${s.missed}`;
+        const a = document.createElement("span"); a.className = "absCnt"; a.textContent = `Ø ${s.absences}`;
         box.appendChild(g); box.appendChild(b); box.appendChild(a);
         return box;
       }
-
       function updateBadges(){
         $count.textContent = students.length ? t("count_badge", { n: students.length }) : "";
         const prioCount = students.filter(s => s.carry).length;
@@ -607,15 +530,13 @@
           leftWrap.className = "name";
           if (absentToday.has(s.id)) leftWrap.classList.add("abs");
 
-          // name span for inline edit
           const nameSpan = document.createElement("span");
           nameSpan.textContent = s.name;
           nameSpan.title = renameHint;
           nameSpan.style.cursor = "text";
-          // inline rename on dblclick (only when absence mode is OFF)
           nameSpan.addEventListener("dblclick", (ev) => {
             ev.stopPropagation();
-            if ($toggleAbsMode.checked) return; // avoid conflicts with absence marking
+            if ($toggleAbsMode.checked) return;
             const input = document.createElement("input");
             input.type = "text";
             input.className = "edit";
@@ -623,14 +544,12 @@
             nameSpan.replaceWith(input);
             input.focus();
             input.select();
-            const cancel = () => {
-              try { input.replaceWith(nameSpan); } catch {}
-            };
+            const cancel = () => { try { input.replaceWith(nameSpan); } catch {} };
             const commit = () => {
               const v = (input.value || "").trim();
               if (v && v !== s.name) {
                 const target = students.find(x => x.id === s.id);
-                if (target) { target.name = v; save(students); markDirty(); }
+                if (target) { target.name = v; save(students); }
                 render(students);
                 renderQueue();
                 return;
@@ -648,20 +567,17 @@
           if (s.carry) {
             const tag = document.createElement("span");
             tag.className = "star";
-            tag.textContent = t("priority_tag");
+            tag.textContent = "приоритет";
             leftWrap.appendChild(tag);
           }
           leftWrap.appendChild(statsEl(s));
 
-          // toggle absent on click when abs-mode is enabled
           leftWrap.addEventListener("click", (ev) => {
-            if (ev && ev.detail && ev.detail > 1) return; // ignore double-clicks
+            if (ev && ev.detail && ev.detail > 1) return;
             if (ev && (ev.target && ev.target.tagName === 'INPUT')) return;
             if (!$toggleAbsMode.checked) return;
             if (absentToday.has(s.id)) absentToday.delete(s.id); else absentToday.add(s.id);
             saveA(absentToday);
-            markDirty();
-            // remove from queue if marked absent
             if (absentToday.has(s.id)) {
               queue = queue.filter(x => x !== s.id);
               saveQ(queue);
@@ -678,7 +594,6 @@
           btn.addEventListener("click", () => {
             students = students.filter(x => x.id !== s.id);
             save(students);
-            markDirty();
             if (absentToday.has(s.id)) { absentToday.delete(s.id); saveA(absentToday); }
             queue = queue.filter(id => id !== s.id);
             saveQ(queue);
@@ -716,7 +631,7 @@
           if (s.carry) {
             const tag = document.createElement("span");
             tag.className = "star";
-            tag.textContent = t("priority_tag");
+            tag.textContent = "приоритет";
             left.appendChild(tag);
           }
           left.appendChild(statsEl(s));
@@ -733,7 +648,6 @@
             if (st) { st.spoke = (st.spoke||0) + 1; st.carry = false; }
             save(students);
             saveQ(queue);
-            markDirty();
             render(students);
             renderQueue();
           });
@@ -746,7 +660,6 @@
             queue = queue.filter(x => x !== id);
             queue.push(id);
             saveQ(queue);
-            markDirty();
             renderQueue();
           });
 
@@ -759,109 +672,66 @@
         updateCaps();
       }
 
-      // ===== Backups =====
-      function renderBackups(){
-        const b = loadB();
-        $binfo.textContent = b.length ? t("backups_count", { n: b.length }) : t("backups_empty");
-        $backupsList.innerHTML = "";
-        if (!b.length) return;
-        for(const it of b){
-          const row = document.createElement("div");
-          row.className = "backupRow";
-          const meta = document.createElement("div");
-          meta.innerHTML = `<strong>${fmt(it.at)}</strong> <span class="backupMeta">${t("meta_backup", { n: (it.students||[]).length, pair: (it.settings?.pair||"-"), per: (it.settings?.per||"-") })}</span>`;
-          const actions = document.createElement("div");
-          const useBtn = document.createElement("button");
-          useBtn.className = "btn small";
-          useBtn.textContent = t("restore");
-          useBtn.addEventListener("click", () => restoreBackup(it.id));
-          const dlBtn = document.createElement("button");
-          dlBtn.className = "btn small";
-          dlBtn.textContent = t("download");
-          dlBtn.addEventListener("click", () => downloadBackup(it.id));
-          const delBtn = document.createElement("button");
-          delBtn.className = "btn small";
-          delBtn.textContent = t("delete");
-          delBtn.addEventListener("click", () => deleteBackup(it.id));
-          actions.appendChild(useBtn);
-          actions.appendChild(dlBtn);
-          actions.appendChild(delBtn);
-          row.appendChild(meta);
-          row.appendChild(actions);
-          $backupsList.appendChild(row);
-        }
-      }
-
-      function toggleBackups(){
-        const show = $backupsCard.style.display !== "block";
-        $backupsCard.style.display = show ? "block" : "none";
-        $toggleBackups.textContent = show ? t("backups_hide") : t("backups_btn");
-        $toggleBackups.title = show ? t("backups_hide") : t("backups_btn");
-        if (show) renderBackups();
-      }
-
-      function createBackup(silent){
-        const bk = {
-          id: uid(),
+      // ===== Import / Export / Share =====
+      function doExport(){
+        const payload = {
+          version: 2,
           at: nowISO(),
-          students: students,
+          lang: getLang(),
+          students,
           settings: loadS(),
-          queue: queue,
-          absent: Array.from(absentToday),
-          version: 1
+          queue,
+          absent: Array.from(absentToday)
         };
-        const arr = loadB();
-        arr.unshift(bk);
-        saveB(arr.slice(0, 50)); // keep up to 50
-        if (!silent) alert(t("saved_backup"));
-      }
-
-      function restoreBackup(id){
-        const arr = loadB();
-        const it = arr.find(x => x.id === id);
-        if (!it) return alert(t("not_found"));
-        const ok = prompt(t("restore_confirm"), "");
-        if (ok !== "подтвердить") return alert(t("cancelled"));
-        students = (it.students || []).map(ensureStudent);
-        save(students);
-        if (it.settings) { saveS(it.settings); $pairMin.value = it.settings.pair; $perMin.value = it.settings.per; }
-        queue = Array.isArray(it.queue) ? it.queue : [];
-        saveQ(queue);
-        absentToday = new Set(Array.isArray(it.absent) ? it.absent : []);
-        saveA(absentToday);
-        render(students);
-        renderQueue();
-        updateBadges();
-        updateCaps();
-        alert(t("restored"));
-      }
-
-      function deleteBackup(id){
-        const arr = loadB();
-        const idx = arr.findIndex(x => x.id === id);
-        if (idx === -1) return;
-        const ok = confirm(t("delete_confirm"));
-        if (!ok) return;
-        arr.splice(idx,1);
-        saveB(arr);
-        renderBackups();
-      }
-
-      function downloadBackup(id){
-        const arr = loadB();
-        const it = arr.find(x => x.id === id);
-        if (!it) return alert(t("not_found"));
-        const data = JSON.stringify(it, null, 2);
+        const data = JSON.stringify(payload, null, 2);
         const blob = new Blob([data], { type: "application/json" });
+        const ts = payload.at.replace(/[:]/g, "-");
         const a = document.createElement("a");
-        const stamp = (it.at || new Date().toISOString()).replace(/[:]/g, "-");
         a.href = URL.createObjectURL(blob);
-        a.download = `backup_${stamp}.json`;
+        a.download = `seminar_randomizer_export_${ts}.json`;
         a.click();
         URL.revokeObjectURL(a.href);
       }
-
-      // ===== Share (snapshot link) =====
+      function importJSON(file){
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const text = e.target.result;
+            const parsed = JSON.parse(text);
+            let items = [];
+            let settings = null;
+            let q = [];
+            let abs = [];
+            let lang = null;
+            if (Array.isArray(parsed)) {
+              items = parsed;
+            } else if (parsed && Array.isArray(parsed.students)) {
+              items = parsed.students;
+              settings = parsed.settings || null;
+              q = Array.isArray(parsed.queue) ? parsed.queue : [];
+              abs = Array.isArray(parsed.absent) ? parsed.absent : [];
+              lang = typeof parsed.lang === "string" ? parsed.lang : null;
+            } else {
+              alert(t("bad_json"));
+              return;
+            }
+            items = items.map(ensureStudent).filter(x => x.name);
+            students = items; save(students);
+            if (settings) { saveS(settings); $pairMin.value = settings.pair; $perMin.value = settings.per; if ($autoExport) $autoExport.checked = !!settings.autoExport; }
+            queue = q; saveQ(queue);
+            absentToday = new Set(abs); saveA(absentToday);
+            if (lang) { setLang(lang); }
+            render(students);
+            renderQueue();
+            updateBadges();
+            updateStaticTexts();
+          } catch (err) {
+            console.error(err);
+            alert(t("read_fail"));
+          }
+        };
+        reader.readAsText(file, "utf-8");
+      }
       function toB64(obj){
         const str = JSON.stringify(obj);
         const bytes = new TextEncoder().encode(str);
@@ -888,128 +758,19 @@
         alert(t("share_copied") + "\n" + url);
       }
 
-      // ===== Renders & actions =====
-      function updateStaticTexts(){
-        document.title = t("app_title");
-        $hdrTitle.textContent = t("app_title");
-
-        $importBtn.textContent = t("import");
-        $saveBackupBtn.textContent = t("save_site");
-        $helpBtn.textContent = t("help");
-        $importBtn.title = t("import"); $saveBackupBtn.title = t("save_site"); $helpBtn.title = t("help");
-
-        $randomize.textContent = t("randomize");
-        $shareBtn.textContent = t("share");
-        $endBtn.textContent = t("end");
-        $clearQueue.textContent = t("clear_queue");
-        $resetStats.textContent = t("reset_stats");
-
-        $timeSettingsTitle.textContent = t("time_settings");
-        $lblPair.childNodes[0].textContent = t("pair_label")+" ";
-        $lblPer.childNodes[0].textContent = t("per_label")+" ";
-        $calcNote.textContent = t("calc_note");
-
-        $studentsTitle.textContent = t("students");
-        $input.placeholder = t("add_placeholder");
-        $absModeText.textContent = t("abs_mode");
-        $hintStats.innerHTML = t("hint_stats");
-        $emptyList.textContent = t("empty_list");
-        $add.title = t("add");
-        $add.setAttribute("aria-label", t("add"));
-
-        $queueTitle.textContent = t("queue_today");
-        $emptyQueue.textContent = t("empty_queue");
-        document.getElementById("hintQueueAbs").textContent = t("hint_queue_abs");
-
-        $toggleBackups.textContent = t("backups_btn");
-        $toggleBackups.title = t("backups_btn");
-        $backupsTitle.textContent = t("backups_title");
-        $binfo.textContent = t("backups_empty");
-        $saveBackup2.textContent = t("save_now");
-        $saveBackup2.title = t("save_now");
-
-        // Help
-        $helpTitle.textContent = t("help_title");
-        $helpIntro.textContent = t("help_intro");
-        $helpList.innerHTML = "";
-        for (const li of (i18n[getLang()].help_items || [])) {
-          const el = document.createElement("li"); el.innerHTML = li; $helpList.appendChild(el);
-        }
-        $helpLegend.innerHTML = t("help_legend");
-        $helpStorage.innerHTML = t("help_storage");
-        $helpClose.textContent = t("help_close");
-
-        updateCaps();
-        render(students);
-        renderQueue();
-      }
-
-      function add(){
-        const n = ($input.value || "").trim();
-        if(!n) return;
-        students.push({ id: uid(), name: n, carry: false, spoke: 0, missed: 0, absences: 0 });
-        save(students);
-        markDirty();
-        render(students);
-        $input.value = "";
-        $input.focus();
-      }
-
-      function importJSON(file){
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          try {
-            const text = e.target.result;
-            const parsed = JSON.parse(text);
-            let items = [];
-            if (Array.isArray(parsed)) {
-              items = parsed;
-            } else if (parsed && Array.isArray(parsed.students)) {
-              items = parsed.students;
-            } else {
-              alert(t("bad_json"));
-              return;
-            }
-            items = items.map(ensureStudent).filter(x => x.name);
-            students = items;
-            save(students);
-            markDirty();
-            queue = [];
-            absentToday = new Set();
-            saveQ(queue);
-            saveA(absentToday);
-            render(students);
-            renderQueue();
-            updateBadges();
-          } catch (err) {
-            alert(t("read_fail"));
-          }
-        };
-        reader.readAsText(file, "utf-8");
-      }
-
+      
+      // ===== Queue build =====
       function randomizeQueue(){
-        if(!students.length){
-          alert(t("need_students"));
-          return;
-        }
+        if(!students.length){ alert(t("need_students")); return; }
         const present = students.filter(s => !absentToday.has(s.id));
         if(!present.length){ alert(t("no_present")); return; }
         const prio = shuffle(present.filter(s => s.carry).map(s => s.id));
         const rest = shuffle(present.filter(s => !s.carry).map(s => s.id));
         queue = [...prio, ...rest];
         saveQ(queue);
-        markDirty();
         renderQueue();
       }
-
-      function clearQueue(){
-        queue = [];
-        saveQ(queue);
-        markDirty();
-        renderQueue();
-      }
-
+// ===== End session & settings =====
       function endSession(opts){
         const silent = opts && opts.silent;
         const remaining = new Set(queue);
@@ -1025,81 +786,113 @@
           students = students.map(s => absentToday.has(s.id) ? { ...s, absences: (s.absences||0) + 1 } : s);
         }
         save(students);
-        markDirty();
-        render(students);
-        clearQueue();
+        queue = [];
+        saveQ(queue);
         absentToday = new Set();
         saveA(absentToday);
         updateBadges();
         render(students);
         renderQueue();
         updateCaps();
-        if (!silent) alert(t("end_done"));
+        if (!silent) {
+          if ($autoExport && $autoExport.checked) { try{ doExport(); }catch(e){} }
+          alert(t("end_done"));
+        }
       }
 
       function onSettingsChange(){
         let pair = Math.max(1, Number($pairMin.value) || 100);
         let per = Math.max(1, Number($perMin.value) || 3);
-        saveS({ pair, per });
-        markDirty();
+        const autoExport = !!($autoExport && $autoExport.checked);
+        saveS({ pair, per, autoExport });
         renderQueue();
         updateCaps();
       }
 
-      // Auto finalize + backup on exit
-      function needAutoFinalize(){
-        return (queue && queue.length > 0) || (absentToday && absentToday.size > 0);
-      }
-      function autoFinalizeAndBackup(){
+      // ===== Pending finalize: only on true exit, not reload =====
+      function navType(){
         try {
-          if (needAutoFinalize()) { endSession({silent: true}); }
-          if (dirty) { createBackup(true); }
-        } catch (e) { /* no-op */ }
+          const e = performance.getEntriesByType("navigation")[0];
+          if (e && e.type) return e.type; // 'navigate' | 'reload' | 'back_forward' | 'prerender'
+          if (performance.navigation) {
+            if (performance.navigation.type === 1) return "reload";
+            if (performance.navigation.type === 2) return "back_forward";
+          }
+        } catch {}
+        return "navigate";
       }
-      window.addEventListener("beforeunload", function(){
-        autoFinalizeAndBackup();
-      });
+      function needAutoFinalize(){ return (queue && queue.length > 0) || (absentToday && absentToday.size > 0); }
+      function savePendingFinalize(){
+        try {
+          if (!needAutoFinalize()) { localStorage.removeItem(PKEY); return; }
+          const payload = { at: nowISO(), queue: Array.from(queue || []), absent: Array.from(absentToday || []) };
+          localStorage.setItem(PKEY, JSON.stringify(payload));
+        } catch {}
+      }
+      function applyPendingIfNeeded(){
+        const raw = localStorage.getItem(PKEY);
+        if (!raw) return;
+        const ttype = navType();
+        if (ttype === "reload") { localStorage.removeItem(PKEY); return; }
+        let p; try { p = JSON.parse(raw); } catch { localStorage.removeItem(PKEY); return; }
+        const remaining = new Set(Array.isArray(p.queue) ? p.queue : []);
+        const absentSet = new Set(Array.isArray(p.absent) ? p.absent : []);
+        if (remaining.size) {
+          students = students.map(s => {
+            if (remaining.has(s.id) && !absentSet.has(s.id)) {
+              return { ...s, carry: true, missed: (s.missed||0) + 1 };
+            }
+            return s;
+          });
+        }
+        if (absentSet.size) {
+          students = students.map(s => absentSet.has(s.id) ? { ...s, absences: (s.absences||0) + 1 } : s);
+        }
+        save(students);
+        queue = [];
+        saveQ(queue);
+        absentToday = new Set();
+        saveA(absentToday);
+        localStorage.removeItem(PKEY);
+      }
+      window.addEventListener("beforeunload", savePendingFinalize);
 
-      // Help open/close
-      function openHelp(){ $help.style.display = "flex"; }
-      function closeHelp(){ $help.style.display = "none"; }
-      $helpBtn.addEventListener("click", openHelp);
-      $helpClose.addEventListener("click", closeHelp);
-      $help.addEventListener("click", (e)=>{ if (e.target === $help) closeHelp(); });
+      // ===== Help open/close =====
+      function openHelp(){ document.getElementById("helpOverlay").style.display = "flex"; }
+      function closeHelp(){ document.getElementById("helpOverlay").style.display = "none"; }
+      document.getElementById("helpBtn").addEventListener("click", openHelp);
+      document.getElementById("helpClose").addEventListener("click", closeHelp);
+      document.getElementById("helpOverlay").addEventListener("click", (e)=>{ if (e.target.id === "helpOverlay") closeHelp(); });
       document.addEventListener("keydown", (e)=>{
         if (e.key === "Escape") closeHelp();
         if (e.key === '?' || (e.shiftKey && e.key === '/')) openHelp();
       });
 
-      // Bindings
+      // ===== Bindings =====
       const $file = document.getElementById("fileInput");
       $importBtn.addEventListener("click", () => $file.click());
       $file.addEventListener("change", () => {
         if ($file.files && $file.files[0]) importJSON($file.files[0]);
         $file.value = "";
       });
-
-      document.getElementById("saveBackupBtn").addEventListener("click", () => createBackup(false));
-      $saveBackup2.addEventListener("click", () => createBackup(false));
-      $toggleBackups.addEventListener("click", toggleBackups);
+      $exportBtn.addEventListener("click", doExport);
 
       $randomize.addEventListener("click", randomizeQueue);
       $shareBtn.addEventListener("click", shareQueue);
-      $clearQueue.addEventListener("click", clearQueue);
+      $clearQueue.addEventListener("click", () => { queue = []; saveQ(queue); renderQueue(); });
       $endBtn.addEventListener("click", () => endSession({silent:false}));
       $resetStats.addEventListener("click", () => {
         const phrase = prompt(t("reset_confirm"), "");
         if (phrase !== "подтвердить") { alert(t("cancelled")); return; }
         students = students.map(s => ({ ...s, spoke: 0, missed: 0, absences: 0, carry: false }));
         save(students);
-        markDirty();
         queue = [];
         saveQ(queue);
         absentToday = new Set();
         saveA(absentToday);
+        updateBadges();
         render(students);
         renderQueue();
-        updateBadges();
         updateCaps();
         alert(t("reset_done"));
       });
@@ -1107,11 +900,68 @@
         $pairMin.addEventListener(ev, onSettingsChange);
         $perMin.addEventListener(ev, onSettingsChange);
       });
+      $autoExport.addEventListener("change", onSettingsChange);
 
-      document.getElementById("addBtn").addEventListener("click", add);
-      document.getElementById("input").addEventListener("keydown", (e) => { if(e.key === "Enter") add(); });
+      document.getElementById("addBtn").addEventListener("click", () => {
+        const n = ($input.value || "").trim();
+        if(!n) return;
+        students.push({ id: uid(), name: n, carry: false, spoke: 0, missed: 0, absences: 0 });
+        save(students);
+        render(students);
+        $input.value = "";
+        $input.focus();
+      });
+      document.getElementById("input").addEventListener("keydown", (e) => { if(e.key === "Enter") { e.preventDefault(); document.getElementById("addBtn").click(); } });
 
-      // Init
+      // ===== Init =====
+      function updateStaticTexts(){
+        document.title = t("app_title");
+        const ttl = t("app_title");
+        const parts = ttl.split(" ");
+        if (parts.length >= 2) {
+          const a = parts[0], b = parts.slice(1).join(" ");
+          $hdrTitle.innerHTML = `<span class="hl">${a.slice(0,3)}</span>${a.slice(3)} <span class="hl">${b.slice(0,3)}</span>${b.slice(3)}`;
+        } else {
+          $hdrTitle.textContent = ttl;
+        }
+
+        $importBtn.textContent = t("import");
+        $exportBtn.textContent = t("export");
+        $helpBtn.textContent = t("help");
+        $importBtn.title = t("import"); $exportBtn.title = t("export"); $helpBtn.title = t("help");
+
+        $randomize.textContent = t("randomize");
+        $shareBtn.textContent = t("share");
+        $endBtn.textContent = t("end");
+        $clearQueue.textContent = t("clear_queue");
+        $resetStats.textContent = t("reset_stats");
+
+        $timeSettingsTitle.textContent = t("time_settings");
+        ($lblPair.querySelector("span")||$lblPair).textContent = t("pair_label")+" ";
+        ($lblPer.querySelector("span")||$lblPer).textContent = t("per_label")+" ";
+        $calcNote.textContent = t("calc_note");
+        $lblAutoExport.textContent = t("auto_export");
+
+        $studentsTitle.textContent = t("students");
+        $input.placeholder = t("add_placeholder");
+        $absModeText.textContent = t("abs_mode");
+        $hintStats.innerHTML = t("hint_stats");
+        $emptyList.textContent = t("empty_list");
+        $add.title = t("add");
+        $add.setAttribute("aria-label", t("add"));
+
+        $queueTitle.textContent = t("queue_today");
+        $emptyQueue.textContent = t("empty_queue");
+        document.getElementById("hintQueueAbs").textContent = t("hint_queue_abs");
+
+        renderHelpTexts();
+        updateCaps();
+        render(students);
+        renderQueue();
+      }
+
+      if (!localStorage.getItem(LANG_KEY)) setLang(document.documentElement.lang || "ru");
+      else document.documentElement.lang = getLang();
       $langSel.value = getLang();
       $langSel.title = t("lang_title");
       $langSel.addEventListener("change", () => {
@@ -1119,9 +969,13 @@
         updateStaticTexts();
       });
 
+      // Apply pending finalize only when it was a true exit
+      applyPendingIfNeeded();
+
       const settings = loadS();
       $pairMin.value = settings.pair;
       $perMin.value = settings.per;
+      $autoExport.checked = !!settings.autoExport;
 
       render(students);
       if (queue.length && absentToday.size) {
@@ -1131,10 +985,18 @@
       renderQueue();
       updateCaps();
       updateBadges();
+      renderHelpTexts();
       updateStaticTexts();
+      // enforce Sem/Ran subtle highlight
+      (function(){
+        const ttl = t("app_title");
+        const parts = ttl.split(" ");
+        if (parts.length >= 2) {
+          const a = parts[0], b = parts.slice(1).join(" ");
+          $hdrTitle.innerHTML = `<span class="hl">${a.slice(0,3)}</span>${a.slice(3)} <span class="hl">${b.slice(0,3)}</span>${b.slice(3)}`;
+        }
+      })();
 
-      // Ensure backups panel is hidden at start
-      $backupsCard.style.display = "none";
     })();
   </script>
 </body>
